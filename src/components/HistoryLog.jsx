@@ -1,14 +1,6 @@
 import { Clock3, CornerUpLeft, PlayCircle } from 'lucide-react';
-import type { OperationHistoryEntry } from '../types';
 
-interface HistoryLogProps {
-  entries: OperationHistoryEntry[];
-  activeEntryId: string | null;
-  onReplay(entry: OperationHistoryEntry): void;
-  onUndo(): void;
-}
-
-export default function HistoryLog({ entries, activeEntryId, onReplay, onUndo }: HistoryLogProps) {
+export default function HistoryLog({ entries, activeEntryId, onReplay, onUndo }) {
   return (
     <aside className="flex h-full flex-col rounded-3xl border border-white/10 bg-slate-950/50 p-5 shadow-glow backdrop-blur-xl">
       <div className="flex items-center justify-between gap-3">
@@ -57,7 +49,7 @@ export default function HistoryLog({ entries, activeEntryId, onReplay, onUndo }:
               <button
                 type="button"
                 onClick={() => onReplay(entry)}
-                className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/20"
+                className="mt-3 w-full sm:inline-flex sm:w-auto items-center justify-center sm:justify-start gap-2 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-500/20"
               >
                 <PlayCircle size={16} />
                 Replay
