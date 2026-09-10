@@ -258,7 +258,7 @@ const binaryLayout = (root) => {
       value: String(node.value),
       x,
       y,
-      state: node.color === 'red' ? 'emphasis' : 'default',
+      state: 'default',
       color: node.color,
     });
     index += 1;
@@ -466,8 +466,10 @@ class BinarySearchTreeEngine extends BaseEngine {
       }
     }
 
-    if (!curr || (curr && curr.value !== value)) {
-      steps.push({ type: 'NOT_FOUND', last: steps.length ? steps[steps.length - 1].value : null });
+    const found = steps.some((s) => s.type === 'FOUND');
+    if (!found) {
+      const message = `${value} not found`;
+      return { frames: [this.frameForStatus(message)], snapshot: { kind: this.kind, payload: tree, values: [...this.values] }, message };
     }
 
     // Build animated frames from steps
@@ -486,7 +488,6 @@ class BinarySearchTreeEngine extends BaseEngine {
         return n;
       });
 
-      // Highlight current compare/found node
       if (step.type === 'COMPARE' || step.type === 'FOUND') {
         for (let i = 0; i < decorated.length; i += 1) {
           if (String(decorated[i].value) === String(step.value)) {
@@ -496,28 +497,19 @@ class BinarySearchTreeEngine extends BaseEngine {
         }
       }
 
-      if (step.type === 'NOT_FOUND') {
-        const lastVal = step.last;
-        if (lastVal != null) {
-          for (let i = 0; i < decorated.length; i += 1) {
-            if (String(decorated[i].value) === String(lastVal)) {
-              decorated[i] = { ...decorated[i], state: 'deleted' };
-              break;
-            }
-          }
-        }
-      }
-
       frames.push(makeFrame('', decorated, links));
     }
 
-    const found = steps.some((s) => s.type === 'FOUND');
-    const message = found ? `Found ${value}` : `${value} not found`;
+    if (frames.length > 0) {
+      const lastFrame = frames[frames.length - 1];
+      const finalNodes = lastFrame.nodes.map((n) => ({ ...n, state: 'default' }));
+      frames.push(makeFrame('', finalNodes, lastFrame.links));
+    }
 
     return {
-      frames: frames.length ? frames : [this.frameForStatus(message)],
+      frames,
       snapshot: { kind: this.kind, payload: tree, values: [...this.values] },
-      message,
+      message: `Found ${value}`,
     };
   }
 }
@@ -602,8 +594,10 @@ class AVLTreeEngine extends BinarySearchTreeEngine {
       }
     }
 
-    if (!curr || (curr && curr.value !== value)) {
-      steps.push({ type: 'NOT_FOUND', last: steps.length ? steps[steps.length - 1].value : null });
+    const foundFlag = steps.some((s) => s.type === 'FOUND');
+    if (!foundFlag) {
+      const message = `${value} not found`;
+      return { frames: [this.frameForStatus(message)], snapshot: { kind: this.kind, payload: root, values: [...this.values] }, message };
     }
 
     const frames = [];
@@ -622,23 +616,17 @@ class AVLTreeEngine extends BinarySearchTreeEngine {
           }
         }
       }
-      if (step.type === 'NOT_FOUND') {
-        const lastVal = step.last;
-        if (lastVal != null) {
-          for (let i = 0; i < decorated.length; i += 1) {
-            if (String(decorated[i].value) === String(lastVal)) {
-              decorated[i] = { ...decorated[i], state: 'deleted' };
-              break;
-            }
-          }
-        }
-      }
       frames.push(makeFrame('', decorated, links));
     }
 
-    const foundFlag = steps.some((s) => s.type === 'FOUND');
-    const message = foundFlag ? `Found ${value}` : `${value} not found`;
-    return { frames: frames.length ? frames : [this.frameForStatus(message)], snapshot: { kind: this.kind, payload: root, values: [...this.values] }, message };
+    if (frames.length > 0) {
+      const lastFrame = frames[frames.length - 1];
+      const finalNodes = lastFrame.nodes.map((n) => ({ ...n, state: 'default' }));
+      frames.push(makeFrame('', finalNodes, lastFrame.links));
+    }
+
+    const message = `Found ${value}`;
+    return { frames, snapshot: { kind: this.kind, payload: root, values: [...this.values] }, message };
   }
 
   snapshot() {
@@ -731,8 +719,10 @@ class RedBlackTreeEngine extends BinarySearchTreeEngine {
       }
     }
 
-    if (!curr || (curr && curr.value !== value)) {
-      steps.push({ type: 'NOT_FOUND', last: steps.length ? steps[steps.length - 1].value : null });
+    const foundFlag = steps.some((s) => s.type === 'FOUND');
+    if (!foundFlag) {
+      const message = `${value} not found`;
+      return { frames: [this.frameForStatus(message)], snapshot: { kind: this.kind, payload: root, values: [...this.values] }, message };
     }
 
     const frames = [];
@@ -751,23 +741,17 @@ class RedBlackTreeEngine extends BinarySearchTreeEngine {
           }
         }
       }
-      if (step.type === 'NOT_FOUND') {
-        const lastVal = step.last;
-        if (lastVal != null) {
-          for (let i = 0; i < decorated.length; i += 1) {
-            if (String(decorated[i].value) === String(lastVal)) {
-              decorated[i] = { ...decorated[i], state: 'deleted' };
-              break;
-            }
-          }
-        }
-      }
       frames.push(makeFrame('', decorated, links));
     }
 
-    const foundFlag = steps.some((s) => s.type === 'FOUND');
-    const message = foundFlag ? `Found ${value}` : `${value} not found`;
-    return { frames: frames.length ? frames : [this.frameForStatus(message)], snapshot: { kind: this.kind, payload: root, values: [...this.values] }, message };
+    if (frames.length > 0) {
+      const lastFrame = frames[frames.length - 1];
+      const finalNodes = lastFrame.nodes.map((n) => ({ ...n, state: 'default' }));
+      frames.push(makeFrame('', finalNodes, lastFrame.links));
+    }
+
+    const message = `Found ${value}`;
+    return { frames, snapshot: { kind: this.kind, payload: root, values: [...this.values] }, message };
   }
 
   snapshot() {
@@ -939,8 +923,10 @@ class MultiwayTreeEngine extends BaseEngine {
       curr = (curr.children && childIndex != null) ? curr.children[childIndex] : null;
     }
 
-    if (!curr || (curr && !curr.keys?.includes(String(value)))) {
-      steps.push({ type: 'NOT_FOUND', last: steps.length ? steps[steps.length - 1].from ?? steps[steps.length - 1].keys : null });
+    const foundFlag = steps.some((s) => s.type === 'FOUND');
+    if (!foundFlag) {
+      const message = `${value} not found`;
+      return { frames: [this.frameForStatus(message)], snapshot: { kind: this.kind, payload: tree, values: [...this.values] }, message };
     }
 
     // Build frames
@@ -967,23 +953,16 @@ class MultiwayTreeEngine extends BaseEngine {
         }
       }
 
-      if (step.type === 'NOT_FOUND') {
-        const last = step.last;
-        if (last) {
-          for (let i = 0; i < decorated.length; i += 1) {
-            if (String(decorated[i].value) === String(last)) {
-              decorated[i] = { ...decorated[i], state: 'deleted' };
-              break;
-            }
-          }
-        }
-      }
-
       frames.push(makeFrame('', decorated, links));
     }
 
-    const foundFlag = steps.some((s) => s.type === 'FOUND');
-    const message = foundFlag ? `Found ${value}` : `${value} not found`;
+    if (frames.length > 0) {
+      const lastFrame = frames[frames.length - 1];
+      const finalNodes = lastFrame.nodes.map((n) => ({ ...n, state: 'default' }));
+      frames.push(makeFrame('', finalNodes, lastFrame.links));
+    }
+
+    const message = `Found ${value}`;
     return { frames: frames.length ? frames : [this.frameForStatus(message)], snapshot: { kind: this.kind, payload: tree, values: [...this.values] }, message };
   }
 

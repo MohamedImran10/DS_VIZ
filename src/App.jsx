@@ -42,6 +42,8 @@ export default function App() {
   };
 
   useEffect(() => {
+    engineMap.current = new Map();
+    setEngineVersion((v) => v + 1);
     setTimeline([defaultFrame]);
     setActiveFrameIndex(0);
     setActiveEntryId(null);

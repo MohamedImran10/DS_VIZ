@@ -88,7 +88,7 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
         <p className="text-sm text-slate-400">Animated at {speed.toFixed(1)}x</p>
       </div>
 
-      <div ref={scrollRef} className="relative h-64 sm:h-96 md:h-[560px] lg:h-[760px] w-full max-w-full overflow-x-auto overflow-y-hidden block bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_28%),linear-gradient(180deg,rgba(7,10,18,0.95),rgba(8,11,22,1))]">
+      <div ref={scrollRef} className="relative h-64 sm:h-96 md:h-[560px] lg:h-[760px] w-full max-w-full overflow-x-auto overflow-y-auto block bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_28%),linear-gradient(180deg,rgba(7,10,18,0.95),rgba(8,11,22,1))]">
         <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ width: svgWidth, height: svgHeight }}>
           <g transform={`translate(0, ${offset})`}>
             <g transform={`scale(${scale})`} style={{ transformOrigin: '0 0' }}>
@@ -152,6 +152,9 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                   const values = node.keys ?? [node.value];
 
                   if (isT23Node) {
+                    const t23Fill = node.state === 'visited' ? '#f59e0b' : node.state === 'found' ? '#22c55e' : node.state === 'deleted' ? '#ef4444' : '#38bdf8';
+                    const t23Stroke = node.state === 'found' ? '#86efac' : node.state === 'visited' ? '#fbbf24' : node.state === 'deleted' ? '#fca5a5' : '#7dd3fc';
+                    const textFill = node.state === 'visited' || node.state === 'found' ? '#ffffff' : '#0f172a';
                     return (
                       <motion.g
                         key={node.id}
@@ -166,9 +169,10 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                           width={Math.max(80, values.length * 42 + 18)}
                           height={56}
                           rx={8}
-                          fill="rgba(15,23,42,0.92)"
-                          stroke="rgba(248,113,113,0.85)"
+                          fill={t23Fill}
+                          stroke={t23Stroke}
                           strokeWidth={2}
+                          filter={node.state === 'visited' || node.state === 'emphasis' ? 'url(#glow)' : undefined}
                         />
 
                         {values.map((value, index) => (
@@ -179,15 +183,15 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                               width={34}
                               height={36}
                               rx={4}
-                              fill="rgba(15, 23, 42, 0.6)"
-                              stroke="rgba(248,113,113,0.9)"
+                              fill="rgba(255,255,255,0.25)"
+                              stroke="rgba(255,255,255,0.55)"
                               strokeWidth={2}
                             />
                             <text
                               x={node.x - 15 + index * 42}
                               y={node.y + 7}
                               textAnchor="middle"
-                              fill="#22c55e"
+                              fill={textFill}
                               fontSize={16}
                               fontWeight={700}
                             >
@@ -200,6 +204,8 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                   }
 
                   if (isBTreeNode) {
+                    const bTreeFill = node.state === 'visited' ? '#f59e0b' : node.state === 'found' ? '#22c55e' : '#38bdf8';
+                    const bTreeStroke = node.state === 'found' ? '#86efac' : node.state === 'visited' ? '#fbbf24' : '#7dd3fc';
                     return (
                       <motion.g
                         key={node.id}
@@ -213,9 +219,10 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                           cy={node.y}
                           rx={Math.max(52, node.width / 2)}
                           ry={34}
-                          fill="#4ade80"
-                          stroke="#000000"
-                          strokeWidth={1.5}
+                          fill={bTreeFill}
+                          stroke={bTreeStroke}
+                          strokeWidth={2}
+                          filter={node.state === 'visited' || node.state === 'emphasis' ? 'url(#glow)' : undefined}
                         />
                         <text
                           x={node.x}
@@ -243,7 +250,7 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                         cx={node.x}
                         cy={node.y}
                         r={26}
-                        fill={node.color === 'red' ? '#ef4444' : node.color === 'black' ? '#111827' : nodeFill[node.state ?? 'default']}
+                        fill={node.state === 'found' ? nodeFill.found : node.state === 'visited' ? nodeFill.visited : node.state === 'emphasis' ? nodeFill.emphasis : node.color === 'red' ? '#ef4444' : node.color === 'black' ? '#111827' : nodeFill.default}
                         stroke={node.state === 'found' ? '#86efac' : 'rgba(255,255,255,0.28)'}
                         strokeWidth={2}
                         filter={node.state === 'visited' || node.state === 'emphasis' ? 'url(#glow)' : undefined}
@@ -252,7 +259,7 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                         x={node.x}
                         y={node.y + 5}
                         textAnchor="middle"
-                        fill={node.color === 'black' ? '#f8fafc' : '#0f172a'}
+                        fill={node.state === 'found' || node.state === 'visited' ? '#f8fafc' : node.color === 'black' ? '#f8fafc' : '#0f172a'}
                         fontSize={14}
                         fontWeight={700}
                       >
