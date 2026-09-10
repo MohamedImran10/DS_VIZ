@@ -1,20 +1,17 @@
-import { ArrowDownLeft, CornerDownRight, Play, Search, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowDownLeft, CornerDownRight, Play, Search, Trash2 } from 'lucide-react';
 
-const helperBadges = ['BST', 'AVL', 'RB', 'B-Tree', '2-3', 'Skip'];
+const helperBadges = ['BST', 'AVL', 'RB', 'B-Tree', '2-3'];
 
 export default function ControlPanel({
   value,
   maxSize,
-  skipListMaxLevel,
   selectedKind,
   onValueChange,
   onMaxSizeChange,
-  onSkipLevelChange,
   onInsert,
   onDelete,
   onSearch,
   onReset,
-  onSeedSample,
 }) {
   const onInput = (setter) => (event) => setter(event.target.value);
 
@@ -72,14 +69,6 @@ export default function ControlPanel({
               <Search size={18} />
               Search
             </button>
-            <button
-              type="button"
-              onClick={onSeedSample}
-              className="w-full sm:inline-flex items-center justify-center sm:justify-start gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-white transition hover:bg-white/10"
-            >
-              <Sparkles size={18} />
-              Sample set
-            </button>
           </div>
         </div>
 
@@ -93,26 +82,6 @@ export default function ControlPanel({
               min="0"
               placeholder="Empty = no limit"
               className="w-full rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-white outline-none"
-            />
-          </div>
-
-          <label className="block text-sm font-medium text-slate-100">Skip list max level</label>
-          <div className="flex items-center gap-3">
-            <input
-              value={skipListMaxLevel}
-              onChange={(event) => onSkipLevelChange(Number(event.target.value))}
-              type="range"
-              min={1}
-              max="10"
-              className="h-2 w-full accent-fuchsia-400"
-            />
-            <input
-              value={skipListMaxLevel}
-              onChange={(event) => onSkipLevelChange(Number(event.target.value))}
-              type="number"
-              min={1}
-              max="10"
-              className="w-24 rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-white outline-none"
             />
           </div>
 

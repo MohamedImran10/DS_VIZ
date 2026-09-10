@@ -38,8 +38,6 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
   if (containerWidth > 0 && containerWidth < baseWidth) {
     scale = Math.min(1.6, Math.max(1, baseWidth / containerWidth));
   }
-  // Slight extra boost for skip list visuals
-  if (structure === 'SKIPLIST') scale = Math.min(2, scale * 1.08);
 
   // Calculate dynamic vertical padding to avoid clipping tall towers
   const nodeYs = (frame?.nodes ?? []).map((n) => n.y);
@@ -93,251 +91,194 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
       <div ref={scrollRef} className="relative h-64 sm:h-96 md:h-[560px] lg:h-[760px] w-full max-w-full overflow-x-auto overflow-y-hidden block bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_28%),linear-gradient(180deg,rgba(7,10,18,0.95),rgba(8,11,22,1))]">
         <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ width: svgWidth, height: svgHeight }}>
           <g transform={`translate(0, ${offset})`}>
-          <g transform={`scale(${scale})`} style={{ transformOrigin: '0 0' }}>
-          <defs>
-            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="8" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            <radialGradient id="nodeGlow" cx="50%" cy="40%" r="70%">
-              <stop offset="0%" stopColor="#e2e8f0" />
-              <stop offset="100%" stopColor="#1f2937" />
-            </radialGradient>
-          </defs>
+            <g transform={`scale(${scale})`} style={{ transformOrigin: '0 0' }}>
+              <defs>
+                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="8" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+                <radialGradient id="nodeGlow" cx="50%" cy="40%" r="70%">
+                  <stop offset="0%" stopColor="#e2e8f0" />
+                  <stop offset="100%" stopColor="#1f2937" />
+                </radialGradient>
+              </defs>
 
-          <line x1={0} y1={60} x2={width} y2={60} stroke="rgba(255,255,255,0.06)" />
+              <line x1={0} y1={60} x2={width} y2={60} stroke="rgba(255,255,255,0.06)" />
 
-          {/* Explicit per-level horizontal pointers for SKIPLIST */}
-          {structure === 'SKIPLIST' && frame?.nodes ? (
-            (() => {
-              // Build baseNodes from level-0 rendered nodes, preserving visual order
-              const baseLevelNodes = frame.nodes.filter((n) => !String(n.id).startsWith('HEAD-') && Number(n.level) === 0).slice().sort((a, b) => a.x - b.x);
-              const baseNodes = baseLevelNodes.map((b) => {
-                const value = String(b.value);
-                const height = frame.nodes.filter((m) => String(m.id).startsWith(`${value}-`)).length || 1;
-                return { value, x: b.x, height, baseY: b.y };
-              });
 
-              const maxLevel = baseNodes.length ? Math.max(...baseNodes.map((n) => n.height)) : 0;
-              const segments = [];
 
-              // Level 1 (base, index 0): unbroken sequential links between all base nodes
-              for (let i = 0; i < baseNodes.length - 1; i += 1) {
-                const a = baseNodes[i];
-                const b = baseNodes[i + 1];
-                // find y for level 0 from rendered node
-                const nodeA = frame.nodes.find((n) => n.id === `${a.value}-0`);
-                const levelY = nodeA ? nodeA.y : a.baseY;
-                segments.push({ key: `${a.value}-${b.value}-L0`, x1: a.x, x2: b.x, y: levelY });
-              }
+              <AnimatePresence>
+                {frame?.links.map((link) => {
+                  const from = frame.nodes.find((node) => node.id === link.from);
+                  const to = frame.nodes.find((node) => node.id === link.to);
+                  // If explicit levelY is provided, align both ends to that Y coordinate
+                  let y1 = from?.y;
+                  let y2 = to?.y;
+                  if (typeof link.levelY === 'number') {
+                    y1 = link.levelY;
+                    y2 = link.levelY;
+                  }
 
-              // Levels 2+ (index 1..): filtered adjacent links among nodes with height > level
-              for (let level = 1; level < maxLevel; level += 1) {
-                const nodesAtLevel = baseNodes.filter((n) => n.height > level);
-                for (let i = 0; i < nodesAtLevel.length - 1; i += 1) {
-                  const curr = nodesAtLevel[i];
-                  const next = nodesAtLevel[i + 1];
-                  // get exact Y for this level from rendered node if available
-                  const nodeAtLevel = frame.nodes.find((n) => n.id === `${curr.value}-${level}`) || frame.nodes.find((n) => n.id === `${next.value}-${level}`);
-                  const levelY = nodeAtLevel ? nodeAtLevel.y : (curr.baseY - level * 0 /* fallback */);
-                  segments.push({ key: `${curr.value}-${next.value}-L${level}`, x1: curr.x, x2: next.x, y: levelY });
-                }
-              }
+                  if (!from || !to) {
+                    return null;
+                  }
 
-              return (
-                <AnimatePresence>
-                  {segments.map((seg) => (
+                  return (
                     <motion.line
-                      key={seg.key}
-                      x1={seg.x1}
-                      y1={seg.y}
-                      x2={seg.x2}
-                      y2={seg.y}
-                      stroke="#38bdf8"
-                      strokeWidth={2}
+                      key={`${link.from}-${link.to}`}
+                      x1={from.x}
+                      y1={y1}
+                      x2={to.x}
+                      y2={y2}
+                      stroke={link.color ?? 'rgba(255,255,255,0.2)'}
+                      strokeWidth={3}
+                      strokeDasharray={link.dashed ? '8 8' : undefined}
                       initial={{ pathLength: 0, opacity: 0 }}
                       animate={{ pathLength: 1, opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.35 / speed }}
+                      transition={{ duration: 0.45 / speed }}
                     />
-                  ))}
-                </AnimatePresence>
-              );
-            })()
-          ) : null}
+                  );
+                })}
+              </AnimatePresence>
 
-          <AnimatePresence>
-            {frame?.links.map((link) => {
-              const from = frame.nodes.find((node) => node.id === link.from);
-              const to = frame.nodes.find((node) => node.id === link.to);
-              // If explicit levelY is provided, align both ends to that Y coordinate
-              let y1 = from?.y;
-              let y2 = to?.y;
-              if (typeof link.levelY === 'number') {
-                y1 = link.levelY;
-                y2 = link.levelY;
-              }
+              <AnimatePresence>
+                {frame?.nodes.map((node) => {
+                  const isT23Node = node.isT23;
+                  const isBTreeNode = node.isBTree;
+                  const values = node.keys ?? [node.value];
 
-              if (!from || !to) {
-                return null;
-              }
-
-              return (
-                <motion.line
-                  key={`${link.from}-${link.to}`}
-                  x1={from.x}
-                  y1={y1}
-                  x2={to.x}
-                  y2={y2}
-                  stroke={link.color ?? 'rgba(255,255,255,0.2)'}
-                  strokeWidth={3}
-                  strokeDasharray={link.dashed ? '8 8' : undefined}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  animate={{ pathLength: 1, opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.45 / speed }}
-                />
-              );
-            })}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {frame?.nodes.map((node) => {
-              const isT23Node = node.isT23;
-              const isBTreeNode = node.isBTree;
-              const values = node.keys ?? [node.value];
-
-              if (isT23Node) {
-                return (
-                  <motion.g
-                    key={node.id}
-                    initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.45 / speed, type: 'spring', stiffness: 180, damping: 18 }}
-                  >
-                    <rect
-                      x={node.x - 40}
-                      y={node.y - 28}
-                      width={Math.max(80, values.length * 42 + 18)}
-                      height={56}
-                      rx={8}
-                      fill="rgba(15,23,42,0.92)"
-                      stroke="rgba(248,113,113,0.85)"
-                      strokeWidth={2}
-                    />
-
-                    {values.map((value, index) => (
-                      <g key={`${node.id}-${value}-${index}`}>
+                  if (isT23Node) {
+                    return (
+                      <motion.g
+                        key={node.id}
+                        initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.45 / speed, type: 'spring', stiffness: 180, damping: 18 }}
+                      >
                         <rect
-                          x={node.x - 32 + index * 42}
-                          y={node.y - 18}
-                          width={34}
-                          height={36}
-                          rx={4}
-                          fill="rgba(15, 23, 42, 0.6)"
-                          stroke="rgba(248,113,113,0.9)"
+                          x={node.x - 40}
+                          y={node.y - 28}
+                          width={Math.max(80, values.length * 42 + 18)}
+                          height={56}
+                          rx={8}
+                          fill="rgba(15,23,42,0.92)"
+                          stroke="rgba(248,113,113,0.85)"
                           strokeWidth={2}
                         />
+
+                        {values.map((value, index) => (
+                          <g key={`${node.id}-${value}-${index}`}>
+                            <rect
+                              x={node.x - 32 + index * 42}
+                              y={node.y - 18}
+                              width={34}
+                              height={36}
+                              rx={4}
+                              fill="rgba(15, 23, 42, 0.6)"
+                              stroke="rgba(248,113,113,0.9)"
+                              strokeWidth={2}
+                            />
+                            <text
+                              x={node.x - 15 + index * 42}
+                              y={node.y + 7}
+                              textAnchor="middle"
+                              fill="#22c55e"
+                              fontSize={16}
+                              fontWeight={700}
+                            >
+                              {value}
+                            </text>
+                          </g>
+                        ))}
+                      </motion.g>
+                    );
+                  }
+
+                  if (isBTreeNode) {
+                    return (
+                      <motion.g
+                        key={node.id}
+                        initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.45 / speed, type: 'spring', stiffness: 180, damping: 18 }}
+                      >
+                        <ellipse
+                          cx={node.x}
+                          cy={node.y}
+                          rx={Math.max(52, node.width / 2)}
+                          ry={34}
+                          fill="#4ade80"
+                          stroke="#000000"
+                          strokeWidth={1.5}
+                        />
                         <text
-                          x={node.x - 15 + index * 42}
-                          y={node.y + 7}
+                          x={node.x}
+                          y={node.y + 6}
                           textAnchor="middle"
-                          fill="#22c55e"
+                          fill="#0f172a"
                           fontSize={16}
                           fontWeight={700}
                         >
-                          {value}
+                          {values.join(', ')}
                         </text>
-                      </g>
-                    ))}
-                  </motion.g>
-                );
-              }
+                      </motion.g>
+                    );
+                  }
 
-              if (isBTreeNode) {
-                return (
-                  <motion.g
-                    key={node.id}
-                    initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.45 / speed, type: 'spring', stiffness: 180, damping: 18 }}
-                  >
-                    <ellipse
-                      cx={node.x}
-                      cy={node.y}
-                      rx={Math.max(52, node.width / 2)}
-                      ry={34}
-                      fill="#4ade80"
-                      stroke="#000000"
-                      strokeWidth={1.5}
-                    />
-                    <text
-                      x={node.x}
-                      y={node.y + 6}
-                      textAnchor="middle"
-                      fill="#0f172a"
-                      fontSize={16}
-                      fontWeight={700}
+                  return (
+                    <motion.g
+                      key={node.id}
+                      initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.45 / speed, type: 'spring', stiffness: 180, damping: 18 }}
                     >
-                      {values.join(', ')}
-                    </text>
-                  </motion.g>
-                );
-              }
+                      <motion.circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={26}
+                        fill={node.color === 'red' ? '#ef4444' : node.color === 'black' ? '#111827' : nodeFill[node.state ?? 'default']}
+                        stroke={node.state === 'found' ? '#86efac' : 'rgba(255,255,255,0.28)'}
+                        strokeWidth={2}
+                        filter={node.state === 'visited' || node.state === 'emphasis' ? 'url(#glow)' : undefined}
+                      />
+                      <text
+                        x={node.x}
+                        y={node.y + 5}
+                        textAnchor="middle"
+                        fill={node.color === 'black' ? '#f8fafc' : '#0f172a'}
+                        fontSize={14}
+                        fontWeight={700}
+                      >
+                        {node.value}
+                      </text>
+                      {node.keys ? (
+                        <text x={node.x} y={node.y + 42} textAnchor="middle" fill="rgba(226,232,240,0.72)" fontSize={11}>
+                          {node.keys.join(' | ')}
+                        </text>
+                      ) : null}
+                    </motion.g>
+                  );
+                })}
+              </AnimatePresence>
 
-              return (
-                <motion.g
-                  key={node.id}
-                  initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.45 / speed, type: 'spring', stiffness: 180, damping: 18 }}
-                >
-                  <motion.circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={26}
-                    fill={node.color === 'red' ? '#ef4444' : node.color === 'black' ? '#111827' : nodeFill[node.state ?? 'default']}
-                    stroke={node.state === 'found' ? '#86efac' : 'rgba(255,255,255,0.28)'}
-                    strokeWidth={2}
-                    filter={node.state === 'visited' || node.state === 'emphasis' ? 'url(#glow)' : undefined}
-                  />
-                  <text
-                    x={node.x}
-                    y={node.y + 5}
-                    textAnchor="middle"
-                    fill={node.color === 'black' ? '#f8fafc' : '#0f172a'}
-                    fontSize={14}
-                    fontWeight={700}
-                  >
-                    {node.value}
+              {!frame ? (
+                <g>
+                  <text x="50%" y="45%" textAnchor="middle" fill="rgba(226,232,240,0.72)" fontSize={18}>
+                    Run an operation to animate the structure.
                   </text>
-                  {node.keys ? (
-                    <text x={node.x} y={node.y + 42} textAnchor="middle" fill="rgba(226,232,240,0.72)" fontSize={11}>
-                      {node.keys.join(' | ')}
-                    </text>
-                  ) : null}
-                </motion.g>
-              );
-            })}
-          </AnimatePresence>
-
-          {!frame ? (
-            <g>
-              <text x="50%" y="45%" textAnchor="middle" fill="rgba(226,232,240,0.72)" fontSize={18}>
-                Run an operation to animate the structure.
-              </text>
-              <text x="50%" y="50%" textAnchor="middle" fill="rgba(148,163,184,0.72)" fontSize={13}>
-                BST, AVL, Red-Black Tree, B-Tree, 2-3 Tree, and Skip List are supported.
-              </text>
+                  <text x="50%" y="50%" textAnchor="middle" fill="rgba(148,163,184,0.72)" fontSize={13}>
+                    BST, AVL, Red-Black Tree, B-Tree, and 2-3 Tree are supported.
+                  </text>
+                </g>
+              ) : null}
             </g>
-          ) : null}
-          </g>
           </g>
         </svg>
       </div>

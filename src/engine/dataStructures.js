@@ -288,6 +288,16 @@ const layoutMultiway = (root, kind = 'BTREE') => {
   const isT23 = kind === 'T23';
   const isBTree = kind === 'BTREE';
 
+  // Helper to compute subtree width (in leaf units)
+  const getSubtreeWidth = (node) => {
+    if (!node.children || node.children.length === 0) {
+      return 1;
+    }
+    return node.children.reduce((acc, child) => acc + getSubtreeWidth(child), 0);
+  };
+
+  const nodeSpacing = 160;
+
   const walk = (node, depth, x, path) => {
     const id = path;
     const keyCount = node.keys.length;
@@ -305,80 +315,35 @@ const layoutMultiway = (root, kind = 'BTREE') => {
       width: contentWidth,
     });
 
-    node.children.forEach((child, index) => {
-      const childX = x - ((node.children.length - 1) * 180) / 2 + index * 180;
-      const childPath = `${path}.${index}`;
-      links.push({ from: id, to: childPath, color: isT23 ? 'rgba(248,113,113,0.8)' : 'rgba(255,183,77,0.7)' });
-      walk(child, depth + 1, childX, childPath);
-    });
+    if (node.children && node.children.length > 0) {
+      const totalWidth = getSubtreeWidth(node);
+      let currentX = x - (totalWidth * nodeSpacing) / 2;
+
+      node.children.forEach((child, index) => {
+        const childWidth = getSubtreeWidth(child);
+        const childX = currentX + (childWidth * nodeSpacing) / 2;
+        const childPath = `${path}.${index}`;
+
+        links.push({
+          from: id,
+          to: childPath,
+          color: isT23 ? 'rgba(248,113,113,0.8)' : 'rgba(255,183,77,0.7)',
+        });
+
+        walk(child, depth + 1, childX, childPath);
+        currentX += childWidth * nodeSpacing;
+      });
+    }
   };
 
-  walk(root, 0, 420, 'root');
-  return { nodes, links };
-};
-
-const layoutSkipList = (snapshot) => {
-  const nodes = [];
-  const links = [];
-  const marginX = 80; // left margin so first node remains in view
-  const horizontalSpacing = 140; // distance between node columns
-  const spacingY = 78;
-  const maxLevel = snapshot.maxLevel || 6;
-
-  // Create grid nodes and vertical tower links
-  snapshot.nodes.forEach((entry, index) => {
-    for (let level = 0; level < entry.height; level += 1) {
-      const id = `${entry.value}-${level}`;
-      // Dynamic X positioning using sorted index and left margin
-      const x = marginX + index * horizontalSpacing;
-      nodes.push({ id, value: String(entry.value), x, y: 90 + (maxLevel - 1 - level) * spacingY, level, state: level === entry.height - 1 ? 'emphasis' : 'default' });
-
-      if (level > 0) {
-        links.push({ from: `${entry.value}-${level}`, to: `${entry.value}-${level - 1}`, color: 'rgba(56,189,248,0.8)' });
-      }
-    }
-  });
-
-  // Optional HEAD / sentinel column on the far left spanning all levels
-  const headX = marginX - horizontalSpacing;
-  for (let level = 0; level < maxLevel; level += 1) {
-    const headId = `HEAD-${level}`;
-    nodes.push({ id: headId, value: 'HEAD', x: headX, y: 90 + (maxLevel - 1 - level) * spacingY, level, state: 'head' });
-    if (level > 0) {
-      links.push({ from: `HEAD-${level}`, to: `HEAD-${level - 1}`, color: 'rgba(250,204,21,0.9)' });
-    }
-  }
-
-  // Horizontal links (express lanes) on each level:
-  // Build a quick lookup from id -> rendered node
-  const idToNode = new Map(nodes.map((n) => [n.id, n]));
-
-  // For each level, connect adjacent nodes according to snapshot order.
-  // Level 0 (base) MUST connect every adjacent node.
-  for (let level = 0; level < maxLevel; level += 1) {
-    // Filter snapshot nodes in sequential order that reach > level (height > level)
-    const active = snapshot.nodes
-      .map((e) => ({ value: e.value, height: Number(e.height) || 1 }))
-      .filter((e) => e.height > level)
-      .sort((a, b) => Number(a.value) - Number(b.value));
-
-    if (active.length === 0) continue;
-
-    // Do not create HEAD -> first links here; renderer will draw only between real nodes.
-
-    // Connect each adjacent pair sequentially (no skipping)
-    for (let i = 0; i < active.length - 1; i += 1) {
-      const fromId = `${active[i].value}-${level}`;
-      const toId = `${active[i + 1].value}-${level}`;
-      const fromNode = idToNode.get(fromId);
-      const toNode = idToNode.get(toId);
-      if (!fromNode || !toNode) continue;
-      links.push({ from: fromId, to: toId, color: '#38bdf8', levelY: fromNode.y });
-    }
-  }
+  const rootWidth = getSubtreeWidth(root);
+  const startX = Math.max(420, (rootWidth * nodeSpacing) / 2 + 60);
+  walk(root, 0, startX, 'root');
 
   return { nodes, links };
 };
+
+
 
 class BaseEngine {
   constructor(kind) {
@@ -391,11 +356,6 @@ class BaseEngine {
   }
 
   renderCurrentState() {
-    if (this.kind === 'SKIPLIST') {
-      const snapshot = this.snapshotState ?? this.rebuildSnapshot?.(6) ?? { maxLevel: 6, level: 1, nodes: [] };
-      return layoutSkipList(snapshot);
-    }
-
     if (this.kind === 'BTREE' || this.kind === 'T23') {
       return layoutMultiway(this.root ?? null, this.kind);
     }
@@ -828,37 +788,12 @@ class MultiwayTreeEngine extends BaseEngine {
   }
 
   build(values) {
-    if (!values.length) {
-      return null;
+    if (!values || !values.length) return null;
+    const engine = new MultiwayTreeEngine(this.kind, this.order);
+    for (const v of values) {
+      engine.insert(v);
     }
-
-    const sorted = [...values].sort((a, b) => a - b);
-    const maxKeys = Math.max(1, this.order - 1);
-
-    const splitValues = (items) => {
-      if (!items.length) {
-        return null;
-      }
-
-      if (items.length <= maxKeys) {
-        return { keys: items, children: [] };
-      }
-
-      const middleIndex = Math.floor(items.length / 2);
-      const middleValue = items[middleIndex];
-      const leftValues = items.slice(0, middleIndex);
-      const rightValues = items.slice(middleIndex + 1);
-
-      return {
-        keys: [middleValue],
-        children: [
-          leftValues.length ? splitValues(leftValues) : null,
-          rightValues.length ? splitValues(rightValues) : null,
-        ].filter(Boolean),
-      };
-    };
-
-    return splitValues(sorted);
+    return engine.root;
   }
 
   insert(value, context) {
@@ -875,96 +810,75 @@ class MultiwayTreeEngine extends BaseEngine {
       return { frames: [this.frameForStatus(validation)], snapshot: this.snapshot(), message: validation };
     }
 
-    // Insert value into sorted values list for snapshot/history
-    const insertIntoValues = (arr, v) => {
-      const copy = [...arr];
-      let i = 0;
-      while (i < copy.length && copy[i] < v) i += 1;
-      copy.splice(i, 0, v);
-      return copy;
-    };
+    const M = this.order;
 
-    // If this is a 2-3 tree (order === 3), perform proper leaf insertion with splits
-    if (this.order === 3) {
-      // ensure root exists
-      if (!this.root) {
-        this.root = { keys: [value], children: [] };
-        this.values = insertIntoValues(this.values, value);
-        const { nodes, links } = layoutMultiway(this.root, this.kind);
-        return { frames: [makeFrame(`Inserted ${value}`, nodes, links)], snapshot: { kind: this.kind, payload: this.root, values: [...this.values] }, message: `Inserted ${value}` };
+    const insertInNode = (node, v) => {
+      // Leaf node
+      if (!node.children || node.children.length === 0) {
+        const keys = [...node.keys];
+        let i = 0;
+        while (i < keys.length && keys[i] < v) i += 1;
+        keys.splice(i, 0, v);
+
+        if (keys.length < M) {
+          return { node: { keys, children: [] }, promoted: null };
+        }
+
+        // Overflow in leaf: split
+        const mid = Math.floor(keys.length / 2);
+        const promotedKey = keys[mid];
+        const leftNode = { keys: keys.slice(0, mid), children: [] };
+        const rightNode = { keys: keys.slice(mid + 1), children: [] };
+
+        return { node: null, promoted: { key: promotedKey, left: leftNode, right: rightNode } };
       }
 
-      const insertRecursive = (node, v) => {
-        // leaf
-        if (!node.children || node.children.length === 0) {
-          // insert into keys sorted
-          const keys = [...node.keys];
-          let i = 0;
-          while (i < keys.length && keys[i] < v) i += 1;
-          keys.splice(i, 0, v);
-          if (keys.length <= 2) {
-            return { node: { keys, children: [] }, promoted: null };
-          }
-          // overflow: split into two nodes and promote middle
-          const [a, b, c] = keys;
-          const left = { keys: [a], children: [] };
-          const right = { keys: [c], children: [] };
-          return { node: null, promoted: { key: b, left, right } };
-        }
+      // Internal node
+      let idx = 0;
+      while (idx < node.keys.length && v > node.keys[idx]) idx += 1;
 
-        // internal node
-        // find child index to descend
-        let idx = 0;
-        while (idx < node.keys.length && v > node.keys[idx]) idx += 1;
-        const child = node.children[idx];
-        const res = insertRecursive(child, v);
-        if (!res.promoted) {
-          // replace child
-          const newChildren = [...node.children];
-          newChildren[idx] = res.node;
-          return { node: { keys: [...node.keys], children: newChildren }, promoted: null };
-        }
-
-        // incorporate promoted into this node
-        const promotedKey = res.promoted.key;
-        const newKeys = [...node.keys];
-        let insertPos = 0;
-        while (insertPos < newKeys.length && newKeys[insertPos] < promotedKey) insertPos += 1;
-        newKeys.splice(insertPos, 0, promotedKey);
-
-        // replace child at idx with promoted.left and insert promoted.right after it
+      const res = insertInNode(node.children[idx], v);
+      if (!res.promoted) {
         const newChildren = [...node.children];
-        newChildren.splice(idx, 1, res.promoted.left, res.promoted.right);
+        newChildren[idx] = res.node;
+        return { node: { keys: [...node.keys], children: newChildren }, promoted: null };
+      }
 
-        if (newKeys.length <= 2) {
-          return { node: { keys: newKeys, children: newChildren }, promoted: null };
-        }
+      // Incorporate promoted key and split children at idx
+      const newKeys = [...node.keys];
+      newKeys.splice(idx, 0, res.promoted.key);
 
-        // overflow at internal node: split
-        const [k0, k1, k2] = newKeys;
-        // children are c0..c3
-        const [c0, c1, c2, c3] = newChildren;
-        const leftNode = { keys: [k0], children: [c0, c1].filter(Boolean) };
-        const rightNode = { keys: [k2], children: [c2, c3].filter(Boolean) };
-        return { node: null, promoted: { key: k1, left: leftNode, right: rightNode } };
-      };
+      const newChildren = [...node.children];
+      newChildren.splice(idx, 1, res.promoted.left, res.promoted.right);
 
-      const res = insertRecursive(this.root, value);
+      if (newKeys.length < M) {
+        return { node: { keys: newKeys, children: newChildren }, promoted: null };
+      }
+
+      // Overflow in internal node: split
+      const mid = Math.floor(newKeys.length / 2);
+      const promotedKey = newKeys[mid];
+      const leftNode = { keys: newKeys.slice(0, mid), children: newChildren.slice(0, mid + 1) };
+      const rightNode = { keys: newKeys.slice(mid + 1), children: newChildren.slice(mid + 1) };
+
+      return { node: null, promoted: { key: promotedKey, left: leftNode, right: rightNode } };
+    };
+
+    if (!this.root) {
+      this.root = { keys: [value], children: [] };
+    } else {
+      const res = insertInNode(this.root, value);
       if (res.promoted) {
-        // root split
         this.root = { keys: [res.promoted.key], children: [res.promoted.left, res.promoted.right] };
       } else {
         this.root = res.node;
       }
-
-      this.values = insertIntoValues(this.values, value);
-      const { nodes, links } = layoutMultiway(this.root, this.kind);
-      return { frames: [makeFrame(`Inserted ${value}`, nodes, links)], snapshot: { kind: this.kind, payload: this.root, values: [...this.values] }, message: `Inserted ${value}` };
     }
 
-    // Fallback for other orders: rebuild tree from values (existing behavior)
-    this.values.push(value);
-    this.root = this.build(this.values);
+    // Update sorted values list
+    let pos = 0;
+    while (pos < this.values.length && this.values[pos] < value) pos += 1;
+    this.values.splice(pos, 0, value);
 
     const { nodes, links } = layoutMultiway(this.root, this.kind);
     return {
@@ -983,8 +897,12 @@ class MultiwayTreeEngine extends BaseEngine {
       return { frames: [this.frameForStatus(`Value ${value} not found`)], snapshot: this.snapshot(), message: `Value ${value} not found` };
     }
 
-    this.values = this.values.filter((item) => item !== value);
-    this.root = this.build(this.values);
+    const remaining = this.values.filter((item) => item !== value);
+    this.root = null;
+    this.values = [];
+    for (const v of remaining) {
+      this.insert(v);
+    }
 
     const { nodes, links } = layoutMultiway(this.root, this.kind);
     return {
@@ -1079,240 +997,7 @@ class MultiwayTreeEngine extends BaseEngine {
   }
 }
 
-class SkipListEngine extends BaseEngine {
-  constructor(maxLevel = 6, p = 0.5) {
-    super('SKIPLIST');
-    this.MAXLVL = maxLevel;
-    this.P = p;
-    this.level = 0; // current highest level (0-based)
-    // header sentinel node with forward pointers
-    this.header = { key: -Infinity, forward: Array(this.MAXLVL).fill(null) };
-    this.values = [];
-    this.snapshotState = { maxLevel: this.MAXLVL, level: 1, nodes: [] };
-  }
-
-  randomLevel() {
-    // Return a 1-based height using coin-flip (p) up to MAXLVL
-    let level = 1;
-    while (Math.random() < this.P && level < this.MAXLVL) {
-      level += 1;
-    }
-    return level;
-  }
-
-  rebuildValuesFromList() {
-    const vals = [];
-    let cur = this.header.forward[0];
-    while (cur) {
-      vals.push(cur.key);
-      cur = cur.forward[0];
-    }
-    this.values = vals;
-  }
-
-  rebuildSnapshot() {
-    // Traverse level 0 to obtain sorted nodes and their heights
-    const nodes = [];
-    let cur = this.header.forward[0];
-    while (cur) {
-      const height = cur.forward.length; // stored height = forward array length
-      nodes.push({ value: cur.key, height });
-      cur = cur.forward[0];
-    }
-
-    return {
-      maxLevel: this.MAXLVL,
-      level: Math.max(1, this.level + 1, 1),
-      nodes,
-    };
-  }
-
-  insert(value, context) {
-    const validation = this.clampInsert(value, context);
-    if (validation) return { frames: [this.frameForStatus(validation)], snapshot: this.snapshot(), message: validation };
-
-    // build update array
-    const update = Array(this.MAXLVL).fill(null);
-    let current = this.header;
-    for (let i = this.level; i >= 0; i -= 1) {
-      while (current.forward[i] && current.forward[i].key < value) {
-        current = current.forward[i];
-      }
-      update[i] = current;
-    }
-
-    current = current.forward[0];
-    if (current && current.key === value) {
-      return { frames: [this.frameForStatus(`Value ${value} already in list`)], snapshot: this.snapshot(), message: `Value ${value} already in list` };
-    }
-
-    // rlevel is the generated height (1..MAXLVL). Convert to 0-based max index.
-    const rlevel = this.randomLevel();
-    const rIdx = rlevel - 1;
-    if (rIdx > this.level) {
-      for (let i = this.level + 1; i <= rIdx; i += 1) update[i] = this.header;
-      this.level = rIdx;
-    }
-
-    // Persist node height and create forward array of exact length = rlevel
-    const newNode = { key: value, forward: Array(rlevel).fill(null), height: rlevel };
-    for (let i = 0; i <= rIdx; i += 1) {
-      newNode.forward[i] = update[i].forward[i] ?? null;
-      update[i].forward[i] = newNode;
-    }
-
-    this.rebuildValuesFromList();
-    this.snapshotState = this.rebuildSnapshot();
-    const { nodes, links } = layoutSkipList(this.snapshotState);
-
-    return {
-      frames: [makeFrame(`Inserted ${value}`, nodes, links)],
-      snapshot: { kind: this.kind, payload: this.snapshotState, values: [...this.values] },
-      message: `Inserted ${value}`,
-    };
-  }
-
-  delete(value, context) {
-    if (!this.values.length) return { frames: [this.frameForStatus('List is empty')], snapshot: this.snapshot(), message: 'List is empty' };
-
-    // build update array
-    const update = Array(this.MAXLVL).fill(null);
-    let current = this.header;
-    for (let i = this.level; i >= 0; i -= 1) {
-      while (current.forward[i] && current.forward[i].key < value) current = current.forward[i];
-      update[i] = current;
-    }
-
-    current = current.forward[0];
-    if (!current || current.key !== value) {
-      return { frames: [this.frameForStatus(`Value ${value} not found`)], snapshot: this.snapshot(), message: `Value ${value} not found` };
-    }
-
-    for (let i = 0; i <= this.level; i += 1) {
-      if (update[i].forward[i] !== current) break;
-      update[i].forward[i] = current.forward[i] ?? null;
-    }
-
-    while (this.level > 0 && this.header.forward[this.level] == null) this.level -= 1;
-
-    this.rebuildValuesFromList();
-    this.snapshotState = this.rebuildSnapshot();
-
-    const { nodes, links } = layoutSkipList(this.snapshotState);
-    return {
-      frames: [makeFrame(`Deleted ${value}`, nodes, links)],
-      snapshot: { kind: this.kind, payload: this.snapshotState, values: [...this.values] },
-      message: `Deleted ${value}`,
-    };
-  }
-
-  search(value, context) {
-    if (!this.values.length) {
-      return { frames: [this.frameForStatus('List is empty')], snapshot: this.snapshot(), message: 'List is empty' };
-    }
-
-    // Traverse like a typical skip list search, recording visited nodes per step
-    const steps = [];
-    let current = this.header;
-    // iterate from top level down
-    for (let i = this.level; i >= 0; i -= 1) {
-      // record starting position at this level (header)
-      steps.push({ id: `HEAD-${i}`, level: i, type: 'position' });
-      while (current.forward[i] && current.forward[i].key < value) {
-        current = current.forward[i];
-        // record visit to this node at level i
-        steps.push({ id: `${current.key}-${i}`, level: i, type: 'visit' });
-      }
-      // record the node we ended at for this level (could be header or a node)
-      if (current === this.header) {
-        steps.push({ id: `HEAD-${i}`, level: i, type: 'position' });
-      } else {
-        steps.push({ id: `${current.key}-${i}`, level: i, type: 'position' });
-      }
-    }
-
-    // move to potential target at level 0
-    const target = current.forward[0];
-    const found = !!(target && target.key === value);
-    if (target) {
-      steps.push({ id: `${target.key}-0`, level: 0, type: found ? 'found' : 'visit' });
-    }
-
-    // Build frames that progressively highlight the visited nodes
-    const frames = [];
-    const visited = new Set();
-    // ensure snapshot is up to date
-    this.snapshotState = this.rebuildSnapshot();
-
-    for (const step of steps) {
-      // accumulate visited ids (for persistent path highlighting)
-      if (step.id && !String(step.id).startsWith('HEAD-')) visited.add(step.id);
-
-      const { nodes, links } = layoutSkipList(this.snapshotState);
-      const decoratedNodes = nodes.map((n) => {
-        if (visited.has(n.id)) {
-          // if this step marks found and matches id, mark found
-          if (step.type === 'found' && n.id === step.id) return { ...n, state: 'found' };
-          return { ...n, state: 'visited' };
-        }
-        return n;
-      });
-
-      frames.push(makeFrame('', decoratedNodes, links));
-    }
-
-    const message = found ? `Found ${value}` : `${value} not found`;
-
-    return {
-      frames: frames.length ? frames : [this.frameForStatus(message)],
-      snapshot: { kind: this.kind, payload: this.snapshotState, values: [...this.values] },
-      message,
-    };
-  }
-
-  snapshot() {
-    return { kind: this.kind, payload: this.snapshotState, values: [...this.values] };
-  }
-
-  restore(snapshot) {
-    // If payload contains explicit nodes with heights, rebuild deterministically
-    const payload = snapshot?.payload;
-    const vals = Array.isArray(snapshot?.values) ? [...snapshot.values] : [];
-
-    // reset
-    this.header = { key: -Infinity, forward: Array(this.MAXLVL).fill(null) };
-    this.level = 0;
-    this.values = [];
-
-    if (payload && Array.isArray(payload.nodes) && payload.nodes.length) {
-      // last pointer per level (start at header)
-      const lastAtLevel = Array(this.MAXLVL).fill(this.header);
-      for (const entry of payload.nodes) {
-        const value = Number(entry.value);
-        const height = Number(entry.height) || 1;
-        const node = { key: value, forward: Array(height).fill(null), height };
-        // link into each level up to height
-        for (let i = 0; i < height; i += 1) {
-          lastAtLevel[i].forward[i] = node;
-          lastAtLevel[i] = node;
-        }
-        this.level = Math.max(this.level, height - 1);
-        this.values.push(value);
-      }
-
-      this.snapshotState = { maxLevel: this.MAXLVL, level: Math.max(1, this.level + 1), nodes: payload.nodes.map((n) => ({ value: n.value, height: n.height })) };
-      return undefined;
-    }
-
-    // Fallback: rebuild by inserting values (non-deterministic heights)
-    for (const v of vals) {
-      this.insert(Number(v), { maxSize: null, skipListMaxLevel: this.MAXLVL });
-    }
-    this.snapshotState = this.rebuildSnapshot();
-  }
-}
-
-export const createStructureEngine = (kind, opt) => {
+export const createStructureEngine = (kind) => {
   switch (kind) {
     case 'AVL':
       return new AVLTreeEngine();
@@ -1322,11 +1007,6 @@ export const createStructureEngine = (kind, opt) => {
       return new MultiwayTreeEngine('BTREE', 4);
     case 'T23':
       return new MultiwayTreeEngine('T23', 3);
-    case 'SKIPLIST':
-      // opt may be numeric maxLevel or an options object
-      const maxLevel = typeof opt === 'number' ? opt : (opt?.maxLevel ?? 6);
-      const p = opt?.p ?? 0.5;
-      return new SkipListEngine(maxLevel, p);
     case 'BST':
     default:
       return new BinarySearchTreeEngine();

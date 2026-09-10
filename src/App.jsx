@@ -5,15 +5,12 @@ import TopBar from './components/TopBar.jsx';
 import VisualizerCanvas from './components/VisualizerCanvas.jsx';
 import { createStructureEngine } from './engine/dataStructures.js';
 
-const sampleValues = [44, 17, 63, 9, 28, 52, 71, 3, 12, 24, 31, 48, 56, 68, 79];
-
 const structureDescriptions = {
   BST: 'Classic binary search tree with path highlighting.',
   AVL: 'Self-balancing binary tree with rotation-aware animations.',
   RBT: 'Color-coded tree emphasizing recoloring and property fixes.',
   BTREE: 'Multi-key, multi-way tree with split and migration cues.',
   T23: 'Compact order-3 tree with node split and merge storytelling.',
-  SKIPLIST: 'Tiered linked structure with automatic layer calculation.',
 };
 
 const defaultFrame = { message: 'Ready', nodes: [], links: [] };
@@ -23,7 +20,6 @@ export default function App() {
   const [selectedKind, setSelectedKind] = useState('BST');
   const [value, setValue] = useState('');
   const [maxSize, setMaxSize] = useState('');
-  const [skipListMaxLevel, setSkipListMaxLevel] = useState(6);
   const [history, setHistory] = useState([]);
   const [activeEntryId, setActiveEntryId] = useState(null);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
@@ -34,12 +30,7 @@ export default function App() {
 
   const engine = useMemo(() => {
     if (!engineMap.current.has(selectedKind)) {
-      // Pass current skipListMaxLevel when creating a SKIPLIST engine
-      if (selectedKind === 'SKIPLIST') {
-        engineMap.current.set(selectedKind, createStructureEngine(selectedKind, skipListMaxLevel));
-      } else {
-        engineMap.current.set(selectedKind, createStructureEngine(selectedKind));
-      }
+      engineMap.current.set(selectedKind, createStructureEngine(selectedKind));
     }
 
     return engineMap.current.get(selectedKind);
@@ -65,12 +56,6 @@ export default function App() {
   // An empty input means "no limit" (null), so engines can treat it accordingly.
   const context = {
     maxSize: maxSize === '' ? null : (Number.isFinite(Number(maxSize)) ? Math.max(0, Number(maxSize)) : null),
-    skipListMaxLevel,
-  };
-  const handleSkipLevelChange = (next) => {
-    const v = Number(next) || 1;
-    const clamped = Math.max(1, Math.floor(v));
-    setSkipListMaxLevel(clamped);
   };
   const handleMaxSizeChange = (nextValue) => {
     if (nextValue === '') {
@@ -125,7 +110,6 @@ export default function App() {
     }
 
     const result = engine[operation](parsed, context);
-    const isSkipListSearch = selectedKind === 'SKIPLIST' && operation === 'search';
     const treeKinds = new Set(['BST', 'AVL', 'RBT', 'BTREE', 'T23']);
     const isTreeSearch = treeKinds.has(selectedKind) && operation === 'search';
     setValue('');
@@ -139,7 +123,7 @@ export default function App() {
       || result.message.endsWith('is empty');
 
     // For searches: if the result indicates "not found" show a popup, otherwise use animated frames
-    if (isSkipListSearch || isTreeSearch) {
+    if (isTreeSearch) {
       const notFound = typeof result.message === 'string' && result.message.includes('not found');
       isStatusOnly = !!notFound;
     }
@@ -183,7 +167,7 @@ export default function App() {
 
   const handleReset = () => {
     engineMap.current = new Map();
-    const freshEngine = selectedKind === 'SKIPLIST' ? createStructureEngine(selectedKind, skipListMaxLevel) : createStructureEngine(selectedKind);
+    const freshEngine = createStructureEngine(selectedKind);
     engineMap.current.set(selectedKind, freshEngine);
     setHistory([]);
     setValue('');
@@ -194,23 +178,8 @@ export default function App() {
     clearAlerts();
   };
 
-  // Recreate skip list engine when the max-level slider changes, preserving values
-  useEffect(() => {
-    if (selectedKind !== 'SKIPLIST') return undefined;
-    const oldEngine = engineMap.current.get('SKIPLIST');
-    const values = oldEngine && typeof oldEngine.getValues === 'function' ? oldEngine.getValues() : [];
-    const newEngine = createStructureEngine('SKIPLIST', skipListMaxLevel);
-    // Re-insert existing values to preserve order and generate new levels
-    values.forEach((v) => newEngine.insert(Number(v), { maxSize: null, skipListMaxLevel }));
-    engineMap.current.set('SKIPLIST', newEngine);
-    setEngineVersion((x) => x + 1);
-    return undefined;
-  }, [skipListMaxLevel, selectedKind]);
-
   const handleReplay = (entry) => {
-    // If replaying a SKIPLIST, prefer using the snapshot's maxLevel when available
-    const preferredMax = entry.snapshot?.payload?.maxLevel ?? skipListMaxLevel;
-    const restoredEngine = entry.kind === 'SKIPLIST' ? createStructureEngine(entry.kind, preferredMax) : createStructureEngine(entry.kind);
+    const restoredEngine = createStructureEngine(entry.kind);
     restoredEngine.restore(entry.snapshot);
     engineMap.current.set(entry.kind, restoredEngine);
     setEngineVersion((value) => value + 1);
@@ -230,7 +199,7 @@ export default function App() {
       }
 
       const previous = rest.find((entry) => entry.kind === latest.kind) ?? null;
-      const engineForKind = latest.kind === 'SKIPLIST' ? createStructureEngine(latest.kind, skipListMaxLevel) : createStructureEngine(latest.kind);
+      const engineForKind = createStructureEngine(latest.kind);
 
       if (previous) {
         engineForKind.restore(previous.snapshot);
@@ -251,27 +220,6 @@ export default function App() {
 
       return rest;
     });
-  };
-
-  const seedSample = () => {
-    sampleValues.forEach((sample) => {
-      const result = engine.insert(sample, context);
-      const entry = {
-        id: `${Date.now()}-${sample}-${Math.random().toString(36).slice(2, 8)}`,
-        kind: selectedKind,
-        operation: 'insert',
-        value: sample,
-        message: result.message,
-        frames: result.frames,
-        snapshot: result.snapshot,
-        timestamp: Date.now(),
-      };
-      setHistory((current) => [entry, ...current].slice(0, 20));
-    });
-
-    setTimeline([{ message: 'Sample set applied', nodes: [], links: [] }]);
-    setActiveEntryId(null);
-    setActiveFrameIndex(0);
   };
 
   return (
@@ -350,16 +298,13 @@ export default function App() {
           <ControlPanel
             value={value}
             maxSize={maxSize}
-            skipListMaxLevel={skipListMaxLevel}
             selectedKind={selectedKind}
             onValueChange={setValue}
             onMaxSizeChange={handleMaxSizeChange}
-            onSkipLevelChange={handleSkipLevelChange}
             onInsert={() => runOperation('insert')}
             onDelete={() => runOperation('delete')}
             onSearch={() => runOperation('search')}
             onReset={handleReset}
-            onSeedSample={seedSample}
           />
 
           <VisualizerCanvas structure={selectedKind} frame={currentFrame} speed={1} />

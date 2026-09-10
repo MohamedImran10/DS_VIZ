@@ -1,4 +1,4 @@
-export type StructureKind = 'BST' | 'AVL' | 'RBT' | 'BTREE' | 'T23' | 'SKIPLIST';
+export type StructureKind = 'BST' | 'AVL' | 'RBT' | 'BTREE' | 'T23';
 
 export type NodeState = 'default' | 'visited' | 'found' | 'deleted' | 'emphasis';
 
@@ -53,5 +53,5 @@ export interface OperationHistoryEntry {
 
 export interface EngineContext {
   maxSize: number;
-  skipListMaxLevel: number;
 }
+

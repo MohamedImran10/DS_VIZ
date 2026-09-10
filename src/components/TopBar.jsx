@@ -1,4 +1,4 @@
-import { BarChart3, Binary, Layers3, RotateCcw, ShieldCheck, Sigma, TreePine, Menu, X } from 'lucide-react';
+import { Binary, Layers3, RotateCcw, ShieldCheck, Sigma, TreePine, Menu, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 const options = [
@@ -7,7 +7,6 @@ const options = [
   { kind: 'RBT', label: 'Red-Black', icon: <ShieldCheck size={16} /> },
   { kind: 'BTREE', label: 'B-Tree', icon: <Layers3 size={16} /> },
   { kind: 'T23', label: '2-3 Tree', icon: <Sigma size={16} /> },
-  { kind: 'SKIPLIST', label: 'Skip List', icon: <BarChart3 size={16} /> },
 ];
 
 export default function TopBar({ active, onChange, onReset }) {
@@ -89,11 +88,10 @@ export default function TopBar({ active, onChange, onReset }) {
                     key={option.kind}
                     type="button"
                     onClick={() => onChange(option.kind)}
-                    className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all whitespace-nowrap ${
-                      active === option.kind
+                    className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all whitespace-nowrap ${active === option.kind
                         ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/30'
                         : 'text-slate-200 hover:bg-white/10'
-                    }`}
+                      }`}
                   >
                     {option.icon}
                     <span className="hidden sm:inline">{option.label}</span>
@@ -119,7 +117,7 @@ export default function TopBar({ active, onChange, onReset }) {
                     className={`absolute z-50 mt-2 rounded-2xl border border-white/10 bg-slate-950/95 p-3 shadow-lg ${
                       /* full-width on small screens, anchored right on larger */
                       typeof window !== 'undefined' && window.innerWidth < 640 ? 'left-4 right-4' : 'right-0 w-56'
-                    }`}
+                      }`}
                     style={{ top: 'calc(100% + 8px)' }}
                   >
                     {options.map((option) => (
@@ -130,9 +128,8 @@ export default function TopBar({ active, onChange, onReset }) {
                           onChange(option.kind);
                           setMenuOpen(false);
                         }}
-                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
-                          active === option.kind ? 'bg-amber-400/10 text-amber-200' : 'text-slate-200 hover:bg-white/5'
-                        }`}
+                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition ${active === option.kind ? 'bg-amber-400/10 text-amber-200' : 'text-slate-200 hover:bg-white/5'
+                          }`}
                       >
                         <span className="mr-2">{option.icon}</span>
                         <span>{option.label}</span>
