@@ -32,11 +32,11 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
     return () => ro.disconnect();
   }, []);
 
-  // Scale content up on small screens so elements remain tappable/visible.
-  const baseWidth = 900; // desired reference width
+  // On mobile, scale DOWN so the full tree fits; on larger screens keep 1x.
+  const baseWidth = 900;
   let scale = 1;
   if (containerWidth > 0 && containerWidth < baseWidth) {
-    scale = Math.min(1.6, Math.max(1, baseWidth / containerWidth));
+    scale = Math.max(0.55, containerWidth / baseWidth);
   }
 
   // Calculate dynamic vertical padding to avoid clipping tall towers
@@ -79,13 +79,13 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
   }, [totalBase, maxNodeX]);
 
   return (
-    <div ref={containerRef} className="w-full max-w-full overflow-hidden rounded-3xl border border-white/10 bg-slate-950/60 shadow-glow backdrop-blur-xl">
-      <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+    <div ref={containerRef} className="w-full max-w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 shadow-glow backdrop-blur-xl sm:rounded-3xl">
+      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 sm:px-5 sm:py-4">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-violet-200/70">Main Canvas</p>
-          <h2 className="mt-1 text-xl font-semibold text-white">{structure} renderer</h2>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-violet-200/70 sm:text-sm sm:tracking-[0.24em]">Main Canvas</p>
+          <h2 className="mt-0.5 text-base font-semibold text-white sm:mt-1 sm:text-xl">{structure} renderer</h2>
         </div>
-        <p className="text-sm text-slate-400">Animated at {speed.toFixed(1)}x</p>
+        <p className="text-xs text-slate-400 sm:text-sm">Animated at {speed.toFixed(1)}x</p>
       </div>
 
       <div ref={scrollRef} className="relative h-64 sm:h-96 md:h-[560px] lg:h-[760px] w-full max-w-full overflow-x-auto overflow-y-auto block bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_28%),linear-gradient(180deg,rgba(7,10,18,0.95),rgba(8,11,22,1))]">

@@ -227,26 +227,26 @@ export default function App() {
   return (
     <div className="min-h-screen bg-mesh-gradient">
       {limitAlert.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-amber-400/40 bg-slate-900/95 p-6 shadow-[0_0_30px_rgba(251,191,36,0.18)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/20 text-2xl text-amber-200">⚠</div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 backdrop-blur-sm sm:px-4">
+          <div className="w-full max-w-md rounded-2xl border border-amber-400/40 bg-slate-900/95 p-4 shadow-[0_0_30px_rgba(251,191,36,0.18)] sm:rounded-3xl sm:p-6">
+            <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-lg text-amber-200 sm:h-11 sm:w-11 sm:rounded-2xl sm:text-2xl">⚠</div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-amber-100/90">Limit reached</p>
-                  <h3 className="mt-1 text-xl font-semibold text-white">Structure full</h3>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-amber-100/90 sm:text-xs sm:tracking-[0.22em]">Limit reached</p>
+                  <h3 className="mt-0.5 text-base font-semibold text-white sm:mt-1 sm:text-xl">Structure full</h3>
                 </div>
               </div>
             </div>
 
-            <p className="text-base leading-7 text-white">{limitAlert.message}</p>
-            {limitAlert.suggestion && <p className="mt-3 text-sm leading-6 text-amber-100">{limitAlert.suggestion}</p>}
+            <p className="text-sm leading-6 text-white sm:text-base sm:leading-7">{limitAlert.message}</p>
+            {limitAlert.suggestion && <p className="mt-2 text-xs leading-5 text-amber-100 sm:mt-3 sm:text-sm sm:leading-6">{limitAlert.suggestion}</p>}
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-4 flex justify-end sm:mt-6">
               <button
                 type="button"
                 onClick={() => setLimitAlert({ open: false, message: '', suggestion: '' })}
-                className="rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2.5 font-medium text-slate-950 shadow-lg shadow-amber-500/20 transition hover:brightness-110"
+                className="rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2 text-sm font-medium text-slate-950 shadow-lg shadow-amber-500/20 transition hover:brightness-110 sm:rounded-2xl sm:px-5 sm:py-2.5 sm:text-base"
               >
                 OK
               </button>
@@ -256,25 +256,25 @@ export default function App() {
       )}
 
       {statusAlert.open && !limitAlert.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-sky-400/40 bg-slate-900/95 p-6 shadow-[0_0_30px_rgba(56,189,248,0.16)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/20 text-2xl text-sky-200">i</div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 backdrop-blur-sm sm:px-4">
+          <div className="w-full max-w-md rounded-2xl border border-sky-400/40 bg-slate-900/95 p-4 shadow-[0_0_30px_rgba(56,189,248,0.16)] sm:rounded-3xl sm:p-6">
+            <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/20 text-lg text-sky-200 sm:h-11 sm:w-11 sm:rounded-2xl sm:text-2xl">i</div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-sky-100/90">Notice</p>
-                  <h3 className="mt-1 text-xl font-semibold text-white">Status</h3>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-sky-100/90 sm:text-xs sm:tracking-[0.22em]">Notice</p>
+                  <h3 className="mt-0.5 text-base font-semibold text-white sm:mt-1 sm:text-xl">Status</h3>
                 </div>
               </div>
             </div>
 
-            <p className="text-base leading-7 text-white">{statusAlert.message}</p>
+            <p className="text-sm leading-6 text-white sm:text-base sm:leading-7">{statusAlert.message}</p>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-4 flex justify-end sm:mt-6">
               <button
                 type="button"
                 onClick={() => setStatusAlert({ open: false, message: '' })}
-                className="rounded-2xl bg-gradient-to-r from-sky-400 to-cyan-500 px-5 py-2.5 font-medium text-slate-950 shadow-lg shadow-sky-500/20 transition hover:brightness-110"
+                className="rounded-xl bg-gradient-to-r from-sky-400 to-cyan-500 px-4 py-2 text-sm font-medium text-slate-950 shadow-lg shadow-sky-500/20 transition hover:brightness-110 sm:rounded-2xl sm:px-5 sm:py-2.5 sm:text-base"
               >
                 OK
               </button>
@@ -285,15 +285,15 @@ export default function App() {
 
       <TopBar active={selectedKind} onChange={setSelectedKind} onReset={handleReset} />
 
-      <main className="mx-auto grid max-w-[1600px] gap-5 px-4 py-6 lg:grid-cols-[1fr_350px] lg:px-8">
-        <div className="space-y-5 min-w-0">
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-glow backdrop-blur-xl">
-            <div className="flex flex-wrap items-end justify-between gap-4">
+      <main className="mx-auto grid max-w-[1600px] gap-3 px-3 py-4 sm:gap-5 sm:px-4 sm:py-6 lg:grid-cols-[1fr_350px] lg:px-8">
+        <div className="space-y-3 min-w-0 sm:space-y-5">
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-3 shadow-glow backdrop-blur-xl sm:rounded-3xl sm:p-5">
+            <div className="flex flex-wrap items-end justify-between gap-2 sm:gap-4">
               <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-amber-200/70">Overview</p>
-                <h2 className="mt-1 text-2xl font-semibold text-white">{selectedKind}</h2>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-amber-200/70 sm:text-sm sm:tracking-[0.24em]">Overview</p>
+                <h2 className="mt-0.5 text-lg font-semibold text-white sm:mt-1 sm:text-2xl">{selectedKind}</h2>
               </div>
-              <p className="max-w-2xl text-sm leading-6 text-slate-300">{structureDescriptions[selectedKind]}</p>
+              <p className="max-w-2xl text-xs leading-5 text-slate-300 sm:text-sm sm:leading-6">{structureDescriptions[selectedKind]}</p>
             </div>
           </section>
 
