@@ -26,7 +26,7 @@ export default function App() {
   const [engineVersion, setEngineVersion] = useState(0);
   const [statusAlert, setStatusAlert] = useState({ open: false, message: '' });
   const [traversalResult, setTraversalResult] = useState('');
-  const [theme, setTheme] = useState(() => localStorage.getItem('ads-theme') || 'violet');
+  const theme = 'violet';
   const [mode, setMode] = useState(() => localStorage.getItem('ads-mode') || 'dark');
 
   const engine = useMemo(() => {
@@ -42,9 +42,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('ads-theme', theme);
-  }, [theme]);
+    document.documentElement.dataset.theme = 'violet';
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.dsMode = mode;
@@ -245,7 +244,7 @@ export default function App() {
         </div>
       )}
 
-      <TopBar active={selectedKind} onChange={setSelectedKind} onReset={handleReset} theme={theme} setTheme={setTheme} mode={mode} setMode={setMode} />
+      <TopBar active={selectedKind} onChange={setSelectedKind} onReset={handleReset} mode={mode} setMode={setMode} />
 
       <main className="mx-auto grid max-w-[1600px] gap-3 px-3 py-4 sm:gap-5 sm:px-4 sm:py-6 lg:grid-cols-[1fr_350px] lg:px-8">
         <div className="space-y-3 min-w-0 sm:space-y-5">

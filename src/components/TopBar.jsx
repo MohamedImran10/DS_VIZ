@@ -1,7 +1,6 @@
 import { Binary, Layers3, RotateCcw, ShieldCheck, Sigma, TreePine, Menu, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ModeToggle from './ModeToggle.jsx';
-import ThemeToggle from './ThemeToggle.jsx';
 
 const options = [
   { kind: 'BST', label: 'BST', icon: <TreePine size={16} /> },
@@ -11,7 +10,7 @@ const options = [
   { kind: 'T23', label: '2-3 Tree', icon: <Sigma size={16} /> },
 ];
 
-export default function TopBar({ active, onChange, onReset, theme, setTheme, mode, setMode }) {
+export default function TopBar({ active, onChange, onReset, mode, setMode }) {
   const optionsRef = useRef(null);
   const containerRef = useRef(null);
   const menuRef = useRef(null);
@@ -141,7 +140,6 @@ export default function TopBar({ active, onChange, onReset, theme, setTheme, mod
           </div>
 
           <ModeToggle mode={mode} setMode={setMode} />
-          <ThemeToggle theme={theme} setTheme={setTheme} />
         </div>
       </div>
     </header>
