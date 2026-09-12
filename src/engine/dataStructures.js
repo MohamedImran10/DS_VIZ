@@ -607,6 +607,53 @@ class BaseEngine {
     this.values = Array.isArray(snapshot?.values) ? [...snapshot.values] : [];
     this.root = snapshot?.payload ?? null;
   }
+
+  traverse(order) {
+    const orderLabel = order === 'preorder' ? 'Preorder' : order === 'postorder' ? 'Postorder' : 'Inorder';
+    const seq = [];
+
+    if (this.kind === 'BTREE' || this.kind === 'T23') {
+      const walk = (node) => {
+        if (!node) return;
+        const keys = node.keys || [];
+        const children = node.children || [];
+        if (order === 'preorder') {
+          keys.forEach((k) => seq.push(k));
+          children.forEach((child) => walk(child));
+        } else if (order === 'postorder') {
+          children.forEach((child) => walk(child));
+          keys.forEach((k) => seq.push(k));
+        } else {
+          keys.forEach((key, index) => {
+            if (children[index]) walk(children[index]);
+            seq.push(key);
+          });
+          if (children[keys.length]) walk(children[keys.length]);
+        }
+      };
+      walk(this.root);
+    } else {
+      const root = this.root
+        ?? (this.kind === 'AVL'
+          ? buildAVLFromValues(this.values)
+          : this.kind === 'RBT'
+            ? buildRedBlackTreeFromValues(this.values)
+            : buildBSTFromValues(this.values));
+      const walk = (node) => {
+        if (!node) return;
+        if (order === 'preorder') seq.push(node.value);
+        walk(node.left);
+        if (order === 'inorder') seq.push(node.value);
+        walk(node.right);
+        if (order === 'postorder') seq.push(node.value);
+      };
+      walk(root);
+    }
+
+    const result = seq.join(', ');
+    const message = seq.length ? `${orderLabel}: ${result}` : `${orderLabel}: (tree is empty)`;
+    return { order, orderLabel, result, values: seq, message };
+  }
 }
 
 class BinarySearchTreeEngine extends BaseEngine {

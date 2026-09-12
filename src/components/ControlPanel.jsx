@@ -1,4 +1,4 @@
-import { ArrowDownLeft, CornerDownRight, Search, Trash2 } from 'lucide-react';
+import { ArrowDownLeft, CornerDownRight, List, ListOrdered, ListTree, Search, Trash2 } from 'lucide-react';
 
 const helperBadges = ['BST', 'AVL', 'RB', 'B-Tree', '2-3'];
 
@@ -10,6 +10,8 @@ export default function ControlPanel({
   onDelete,
   onSearch,
   onReset,
+  onTraverse,
+  traversalResult,
 }) {
   const onInput = (setter) => (event) => setter(event.target.value);
 
@@ -74,6 +76,42 @@ export default function ControlPanel({
             <CornerDownRight size={16} />
             Reset structure
           </button>
+        </div>
+
+        <div className="mt-3 border-t border-white/10 pt-3 sm:mt-4 sm:pt-4">
+          <p className="mb-1.5 text-xs font-medium text-slate-100 sm:mb-2 sm:text-sm">Traversals</p>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => onTraverse('inorder')}
+              className="inline-flex items-center justify-center whitespace-nowrap gap-1.5 rounded-xl border border-violet-400/20 bg-violet-500/10 px-3 py-2 text-sm font-medium text-violet-100 transition hover:bg-violet-500/20 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
+            >
+              <ListOrdered size={16} />
+              Inorder
+            </button>
+            <button
+              type="button"
+              onClick={() => onTraverse('preorder')}
+              className="inline-flex items-center justify-center whitespace-nowrap gap-1.5 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/20 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
+            >
+              <ListTree size={16} />
+              Preorder
+            </button>
+            <button
+              type="button"
+              onClick={() => onTraverse('postorder')}
+              className="inline-flex items-center justify-center whitespace-nowrap gap-1.5 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-100 transition hover:bg-sky-500/20 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
+            >
+              <List size={16} />
+              Postorder
+            </button>
+          </div>
+
+          {traversalResult && (
+            <div className="mt-2.5 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-2.5 text-sm leading-6 text-emerald-100 sm:mt-3 sm:px-4 sm:py-3 sm:text-base">
+              {traversalResult}
+            </div>
+          )}
         </div>
       </div>
     </section>

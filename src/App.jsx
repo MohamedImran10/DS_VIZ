@@ -25,6 +25,7 @@ export default function App() {
   const [timeline, setTimeline] = useState([]);
   const [engineVersion, setEngineVersion] = useState(0);
   const [statusAlert, setStatusAlert] = useState({ open: false, message: '' });
+  const [traversalResult, setTraversalResult] = useState('');
 
   const engine = useMemo(() => {
     if (!engineMap.current.has(selectedKind)) {
@@ -46,6 +47,7 @@ export default function App() {
     setActiveEntryId(null);
     setValue('');
     setHistory([]);
+    setTraversalResult('');
     clearAlerts();
   }, [selectedKind]);
 
@@ -94,6 +96,7 @@ export default function App() {
     const treeKinds = new Set(['BST', 'AVL', 'RBT', 'BTREE', 'T23']);
     const isTreeSearch = treeKinds.has(selectedKind) && operation === 'search';
     setValue('');
+    setTraversalResult('');
 
     let isStatusOnly = !result.message
       || result.message === 'Enter a valid numeric value'
@@ -141,6 +144,7 @@ export default function App() {
     engineMap.current.set(selectedKind, freshEngine);
     setHistory([]);
     setValue('');
+    setTraversalResult('');
     setTimeline([defaultFrame]);
     setActiveEntryId(null);
     setActiveFrameIndex(0);
@@ -159,6 +163,12 @@ export default function App() {
       setActiveEntryId(entry.id);
       setActiveFrameIndex(0);
     }
+  };
+
+  const handleTraverse = (order) => {
+    const result = engine.traverse(order);
+    setTraversalResult(result.message);
+    clearAlerts();
   };
 
   const handleUndo = () => {
@@ -185,6 +195,7 @@ export default function App() {
         setTimeline(nextFrames);
         setActiveEntryId(previous?.id ?? null);
         setActiveFrameIndex(0);
+        setTraversalResult('');
         clearAlerts();
       }
 
@@ -244,6 +255,8 @@ export default function App() {
             onDelete={() => runOperation('delete')}
             onSearch={() => runOperation('search')}
             onReset={handleReset}
+            onTraverse={handleTraverse}
+            traversalResult={traversalResult}
           />
 
           <VisualizerCanvas structure={selectedKind} frame={currentFrame} speed={1} />
