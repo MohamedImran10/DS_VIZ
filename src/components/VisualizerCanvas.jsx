@@ -136,16 +136,16 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
   }, [nodeCount, horizontalOverflow]);
 
   return (
-    <div className="w-full max-w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 shadow-glow backdrop-blur-xl sm:rounded-3xl">
-      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 sm:px-5 sm:py-4">
+    <div className="w-full max-w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-glow backdrop-blur-xl sm:rounded-3xl">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2 sm:px-5 sm:py-4">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-violet-200/70 sm:text-sm sm:tracking-[0.24em]">Main Canvas</p>
-          <h2 className="mt-0.5 text-base font-semibold text-white sm:mt-1 sm:text-xl">{structure} renderer</h2>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--accent-text)]/70 sm:text-sm sm:tracking-[0.24em]">Main Canvas</p>
+          <h2 className="mt-0.5 text-base font-semibold text-[var(--text-strong)] sm:mt-1 sm:text-xl">{structure} renderer</h2>
         </div>
-        <p className="text-xs text-slate-400 sm:text-sm">Animated at {speed.toFixed(1)}x</p>
+        <p className="text-xs text-[var(--text-muted)] sm:text-sm">Animated at {speed.toFixed(1)}x</p>
       </div>
 
-      <div ref={scrollRef} className="relative h-64 sm:h-96 md:h-[560px] lg:h-[760px] w-full max-w-full overflow-x-auto overflow-y-auto block bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_28%),linear-gradient(180deg,rgba(7,10,18,0.95),rgba(8,11,22,1))]">
+      <div ref={scrollRef} className="relative h-64 sm:h-96 md:h-[560px] lg:h-[760px] w-full max-w-full overflow-x-auto overflow-y-auto block bg-[var(--surface-input)]">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           preserveAspectRatio="xMidYMid meet"
@@ -154,10 +154,10 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
             width: svgWidth,
             height: svgHeight,
             backgroundImage:
-              'linear-gradient(rgba(96,165,250,0.06) 1px, transparent 1px),' +
-              'linear-gradient(90deg, rgba(96,165,250,0.06) 1px, transparent 1px),' +
-              'linear-gradient(rgba(96,165,250,0.12) 1px, transparent 1px),' +
-              'linear-gradient(90deg, rgba(96,165,250,0.12) 1px, transparent 1px)',
+              'linear-gradient(var(--grid-line) 1px, transparent 1px),' +
+              'linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),' +
+              'linear-gradient(var(--grid-line-major) 1px, transparent 1px),' +
+              'linear-gradient(90deg, var(--grid-line-major) 1px, transparent 1px)',
             backgroundSize: '36px 36px, 36px 36px, 144px 144px, 144px 144px',
           }}
         >
@@ -170,10 +170,10 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
               </feMerge>
             </filter>
             <radialGradient id="nodeMetal" cx="50%" cy="32%" r="90%">
-              <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="45%" stopColor="#cbd5e1" />
-              <stop offset="75%" stopColor="#7c8a9d" />
-              <stop offset="100%" stopColor="#3c4856" />
+              <stop offset="0%" stopColor="var(--node-metal-0)" />
+              <stop offset="45%" stopColor="var(--node-metal-1)" />
+              <stop offset="75%" stopColor="var(--node-metal-2)" />
+              <stop offset="100%" stopColor="var(--node-metal-3)" />
             </radialGradient>
             <radialGradient id="nodeGold" cx="50%" cy="32%" r="90%">
               <stop offset="0%" stopColor="#fde68a" />
@@ -196,18 +196,18 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
               <stop offset="100%" stopColor="#075985" />
             </radialGradient>
             <radialGradient id="nodeBlack" cx="50%" cy="32%" r="90%">
-              <stop offset="0%" stopColor="#64748b" />
-              <stop offset="50%" stopColor="#1e293b" />
-              <stop offset="100%" stopColor="#020617" />
+              <stop offset="0%" stopColor="var(--node-black-0)" />
+              <stop offset="50%" stopColor="var(--node-black-1)" />
+              <stop offset="100%" stopColor="var(--node-black-2)" />
             </radialGradient>
           </defs>
 
           {!hasContent ? (
             <g>
-              <text x="50%" y="45%" textAnchor="middle" fill="rgba(226,232,240,0.72)" fontSize={18}>
+              <text x="50%" y="45%" textAnchor="middle" fill="var(--text-muted)" fontSize={18}>
                 Run an operation to animate the structure.
               </text>
-              <text x="50%" y="50%" textAnchor="middle" fill="rgba(148,163,184,0.72)" fontSize={13}>
+              <text x="50%" y="50%" textAnchor="middle" fill="var(--text-faint)" fontSize={13}>
                 BST, AVL, Red-Black Tree, B-Tree, and 2-3 Tree are supported.
               </text>
             </g>
@@ -218,7 +218,7 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                 y1={nodeMinY - 34}
                 x2={contentRight - 10}
                 y2={nodeMinY - 34}
-                stroke="rgba(255,255,255,0.06)"
+                stroke="var(--border)"
               />
 
               <AnimatePresence>

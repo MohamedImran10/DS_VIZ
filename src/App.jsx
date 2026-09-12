@@ -26,7 +26,7 @@ export default function App() {
   const [engineVersion, setEngineVersion] = useState(0);
   const [statusAlert, setStatusAlert] = useState({ open: false, message: '' });
   const [traversalResult, setTraversalResult] = useState('');
-  const [theme, setTheme] = useState(() => localStorage.getItem('ads-theme') || 'sunset');
+  const [theme, setTheme] = useState(() => localStorage.getItem('ads-theme') || 'violet');
   const [mode, setMode] = useState(() => localStorage.getItem('ads-mode') || 'dark');
 
   const engine = useMemo(() => {
