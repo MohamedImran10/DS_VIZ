@@ -1,30 +1,49 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 
-const nodeFill = {
-  default: 'url(#nodeGlow)',
-  visited: '#f59e0b',
-  found: '#22c55e',
-  deleted: '#ef4444',
-  emphasis: '#38bdf8',
+const fillFor = (node) => {
+  if (node.state === 'found') return 'url(#nodeGreen)';
+  if (node.state === 'visited') return 'url(#nodeGold)';
+  if (node.state === 'deleted') return 'url(#nodeRed)';
+  if (node.state === 'emphasis') return 'url(#nodeSky)';
+  if (node.color === 'red') return 'url(#nodeRed)';
+  if (node.color === 'black') return 'url(#nodeBlack)';
+  return 'url(#nodeMetal)';
+};
+
+const X_PAD = 50;
+const TOP_PAD = 46;
+const BOT_PAD = 60;
+const MIN_SCALE = 0.55;
+const TOP_MARGIN = 10;
+
+const halfWidthOf = (node) => {
+  if (node?.isT23) {
+    return Math.max(40, Math.max(80, (node.keys?.length ?? 1) * 42 + 18) / 2);
+  }
+  if (node?.isBTree) {
+    return Math.max(52, (node.width ?? 90) / 2);
+  }
+  return 26;
 };
 
 export default function VisualizerCanvas({ structure, frame, speed }) {
-  const width = 1200;
-  const height = 760;
-
-  const containerRef = useRef(null);
-  const [containerWidth, setContainerWidth] = useState(1200);
   const scrollRef = useRef(null);
+  const [viewport, setViewport] = useState({ w: 1200, h: 560 });
 
   useEffect(() => {
-    const el = containerRef.current;
+    const el = scrollRef.current;
     if (!el) return undefined;
 
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const w = Math.round(entry.contentRect.width);
-        setContainerWidth(w || 0);
+        const width = Math.round(entry.contentRect.width);
+        const height = Math.round(entry.contentRect.height);
+        setViewport((prev) => (
+          prev.w === width && prev.h === height
+            ? prev
+            : { w: width || prev.w, h: height || prev.h }
+        ));
       }
     });
 
@@ -32,54 +51,92 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
     return () => ro.disconnect();
   }, []);
 
-  // On mobile, scale DOWN so the full tree fits; on larger screens keep 1x.
-  const baseWidth = 900;
-  let scale = 1;
-  if (containerWidth > 0 && containerWidth < baseWidth) {
-    scale = Math.max(0.55, containerWidth / baseWidth);
+  const { w: viewW, h: viewH } = viewport;
+  const contentNodes = (frame?.nodes ?? []).filter((node) => !String(node.id).startsWith('HEAD-'));
+
+  // Compute the tree's bounding box in world coordinates.
+  let contentLeft = 0;
+  let contentRight = 0;
+  let contentTop = 0;
+  let contentBottom = 0;
+  let nodeMinY = 0;
+
+  if (contentNodes.length > 0) {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    for (const node of contentNodes) {
+      const half = halfWidthOf(node);
+      minX = Math.min(minX, node.x - half);
+      maxX = Math.max(maxX, node.x + half);
+      minY = Math.min(minY, node.y);
+      maxY = Math.max(maxY, node.y);
+    }
+
+    nodeMinY = minY;
+    contentLeft = minX - X_PAD;
+    contentRight = maxX + X_PAD;
+    contentTop = minY - TOP_PAD;
+    contentBottom = maxY + BOT_PAD;
   }
 
-  // Calculate dynamic vertical padding to avoid clipping tall towers
-  const nodeYs = (frame?.nodes ?? []).map((n) => n.y);
-  const minY = nodeYs.length ? Math.min(...nodeYs) : 0;
-  const maxY = nodeYs.length ? Math.max(...nodeYs) : height;
-  const desiredTopMargin = 60; // ensure topmost nodes sit below this
-  const offset = Math.max(0, desiredTopMargin - minY);
-  const paddingBottom = 80;
-  const svgHeight = Math.max(height, maxY + paddingBottom + offset);
+  const hasContent = contentNodes.length > 0;
+  const contentW = contentRight - contentLeft;
+  const contentH = contentBottom - contentTop;
 
-  // Horizontal sizing: ensure SVG is wide enough for all nodes and enable auto-scroll
-  const baseNodes = (frame?.nodes ?? []).filter((n) => n.level === 0 && !String(n.id).startsWith('HEAD-'));
-  const totalBase = baseNodes.length;
-  // compute max X from nodes (exclude HEAD)
-  const nodeXs = (frame?.nodes ?? []).filter((n) => !String(n.id).startsWith('HEAD-')).map((n) => n.x);
-  const maxNodeX = nodeXs.length ? Math.max(...nodeXs) : 0;
-  const marginX = 80;
-  const rightPadding = 120;
-  const svgWidth = Math.max(containerWidth, Math.ceil(maxNodeX + rightPadding + marginX));
+  // Fit the tree to the viewport (top-center). Scrollbars appear only when the
+  // tree grows so deep/wide that even the smallest allowed scale still overflows.
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
 
-  // Auto-scroll to right when a new base node is appended
-  const prevBaseCountRef = useRef(totalBase);
+  if (hasContent) {
+    const fit = Math.min(viewW / contentW, viewH / contentH, 1);
+    scale = Math.max(MIN_SCALE, Number.isFinite(fit) ? fit : 1);
+    const scaledW = contentW * scale;
+    const scaledH = contentH * scale;
+
+    const svgW = Math.max(viewW, Math.ceil(scaledW));
+    const svgH = Math.max(viewH, Math.ceil(scaledH));
+
+    const left = (svgW - scaledW) / 2;
+    const top = TOP_MARGIN;
+
+    translateX = left - contentLeft * scale;
+    translateY = top - contentTop * scale;
+  }
+
+  const svgWidth = Math.max(viewW, Math.ceil(contentW * scale));
+  const svgHeight = Math.max(viewH, Math.ceil(contentH * scale));
+
+  const horizontalOverflow = svgWidth > viewW;
+  const nodeCount = contentNodes.length;
+
+  // Auto-scroll to the right when a new node pushes the tree past the viewport.
+  const prevCountRef = useRef(0);
   useEffect(() => {
-    if (!scrollRef.current) return undefined;
-    if (totalBase > prevBaseCountRef.current) {
-      // small timeout to let layout update
-      const t = setTimeout(() => {
-        try {
-          scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
-        } catch (e) {
-          // ignore
-        }
-      }, 60);
-      prevBaseCountRef.current = totalBase;
-      return () => clearTimeout(t);
+    const el = scrollRef.current;
+    if (!el) return undefined;
+
+    if (nodeCount > prevCountRef.current) {
+      prevCountRef.current = nodeCount;
+      if (horizontalOverflow) {
+        const timer = setTimeout(() => {
+          el.scrollLeft = el.scrollWidth;
+        }, 60);
+        return () => clearTimeout(timer);
+      }
+      return undefined;
     }
-    prevBaseCountRef.current = totalBase;
+
+    prevCountRef.current = nodeCount;
     return undefined;
-  }, [totalBase, maxNodeX]);
+  }, [nodeCount, horizontalOverflow]);
 
   return (
-    <div ref={containerRef} className="w-full max-w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 shadow-glow backdrop-blur-xl sm:rounded-3xl">
+    <div className="w-full max-w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 shadow-glow backdrop-blur-xl sm:rounded-3xl">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 sm:px-5 sm:py-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-violet-200/70 sm:text-sm sm:tracking-[0.24em]">Main Canvas</p>
@@ -89,26 +146,80 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
       </div>
 
       <div ref={scrollRef} className="relative h-64 sm:h-96 md:h-[560px] lg:h-[760px] w-full max-w-full overflow-x-auto overflow-y-auto block bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_28%),linear-gradient(180deg,rgba(7,10,18,0.95),rgba(8,11,22,1))]">
-        <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="xMidYMid meet" className="block" style={{ width: svgWidth, height: svgHeight }}>
-          <g transform={`translate(0, ${offset})`}>
-            <g transform={`scale(${scale})`} style={{ transformOrigin: '0 0' }}>
-              <defs>
-                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="8" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-                <radialGradient id="nodeGlow" cx="50%" cy="40%" r="70%">
-                  <stop offset="0%" stopColor="#e2e8f0" />
-                  <stop offset="100%" stopColor="#1f2937" />
-                </radialGradient>
-              </defs>
+        <svg
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="block"
+          style={{
+            width: svgWidth,
+            height: svgHeight,
+            backgroundImage:
+              'linear-gradient(rgba(96,165,250,0.06) 1px, transparent 1px),' +
+              'linear-gradient(90deg, rgba(96,165,250,0.06) 1px, transparent 1px),' +
+              'linear-gradient(rgba(96,165,250,0.12) 1px, transparent 1px),' +
+              'linear-gradient(90deg, rgba(96,165,250,0.12) 1px, transparent 1px)',
+            backgroundSize: '36px 36px, 36px 36px, 144px 144px, 144px 144px',
+          }}
+        >
+          <defs>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="8" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <radialGradient id="nodeMetal" cx="50%" cy="32%" r="90%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="45%" stopColor="#cbd5e1" />
+              <stop offset="75%" stopColor="#7c8a9d" />
+              <stop offset="100%" stopColor="#3c4856" />
+            </radialGradient>
+            <radialGradient id="nodeGold" cx="50%" cy="32%" r="90%">
+              <stop offset="0%" stopColor="#fde68a" />
+              <stop offset="45%" stopColor="#fbbf24" />
+              <stop offset="100%" stopColor="#92400e" />
+            </radialGradient>
+            <radialGradient id="nodeGreen" cx="50%" cy="32%" r="90%">
+              <stop offset="0%" stopColor="#a7f3d0" />
+              <stop offset="45%" stopColor="#34d399" />
+              <stop offset="100%" stopColor="#065f46" />
+            </radialGradient>
+            <radialGradient id="nodeRed" cx="50%" cy="32%" r="90%">
+              <stop offset="0%" stopColor="#fecaca" />
+              <stop offset="45%" stopColor="#f87171" />
+              <stop offset="100%" stopColor="#991b1b" />
+            </radialGradient>
+            <radialGradient id="nodeSky" cx="50%" cy="32%" r="90%">
+              <stop offset="0%" stopColor="#bae6fd" />
+              <stop offset="45%" stopColor="#38bdf8" />
+              <stop offset="100%" stopColor="#075985" />
+            </radialGradient>
+            <radialGradient id="nodeBlack" cx="50%" cy="32%" r="90%">
+              <stop offset="0%" stopColor="#64748b" />
+              <stop offset="50%" stopColor="#1e293b" />
+              <stop offset="100%" stopColor="#020617" />
+            </radialGradient>
+          </defs>
 
-              <line x1={0} y1={60} x2={width} y2={60} stroke="rgba(255,255,255,0.06)" />
-
-
+          {!hasContent ? (
+            <g>
+              <text x="50%" y="45%" textAnchor="middle" fill="rgba(226,232,240,0.72)" fontSize={18}>
+                Run an operation to animate the structure.
+              </text>
+              <text x="50%" y="50%" textAnchor="middle" fill="rgba(148,163,184,0.72)" fontSize={13}>
+                BST, AVL, Red-Black Tree, B-Tree, and 2-3 Tree are supported.
+              </text>
+            </g>
+          ) : (
+            <g transform={`translate(${translateX} ${translateY}) scale(${scale})`}>
+              <line
+                x1={contentLeft + 10}
+                y1={nodeMinY - 34}
+                x2={contentRight - 10}
+                y2={nodeMinY - 34}
+                stroke="rgba(255,255,255,0.06)"
+              />
 
               <AnimatePresence>
                 {frame?.links.map((link) => {
@@ -152,9 +263,9 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                   const values = node.keys ?? [node.value];
 
                   if (isT23Node) {
-                    const t23Fill = node.state === 'visited' ? '#f59e0b' : node.state === 'found' ? '#22c55e' : node.state === 'deleted' ? '#ef4444' : '#38bdf8';
-                    const t23Stroke = node.state === 'found' ? '#86efac' : node.state === 'visited' ? '#fbbf24' : node.state === 'deleted' ? '#fca5a5' : '#7dd3fc';
-                    const textFill = node.state === 'visited' || node.state === 'found' ? '#ffffff' : '#0f172a';
+                    const t23Fill = fillFor(node);
+                    const t23Stroke = node.state === 'found' ? '#a7f3d0' : node.state === 'visited' ? '#fde68a' : node.state === 'deleted' ? '#fca5a5' : '#7dd3fc';
+                    const textFill = node.state === 'visited' || node.state === 'found' || node.state === 'emphasis' ? '#ffffff' : '#0f172a';
                     return (
                       <motion.g
                         key={node.id}
@@ -174,6 +285,8 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                           strokeWidth={2}
                           filter={node.state === 'visited' || node.state === 'emphasis' ? 'url(#glow)' : undefined}
                         />
+
+                        <ellipse cx={node.x - 8} cy={node.y - 14} rx={14} ry={6} fill="rgba(255,255,255,0.28)" />
 
                         {values.map((value, index) => (
                           <g key={`${node.id}-${value}-${index}`}>
@@ -204,8 +317,8 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                   }
 
                   if (isBTreeNode) {
-                    const bTreeFill = node.state === 'visited' ? '#f59e0b' : node.state === 'found' ? '#22c55e' : '#38bdf8';
-                    const bTreeStroke = node.state === 'found' ? '#86efac' : node.state === 'visited' ? '#fbbf24' : '#7dd3fc';
+                    const bTreeFill = fillFor(node);
+                    const bTreeStroke = node.state === 'found' ? '#a7f3d0' : node.state === 'visited' ? '#fde68a' : '#7dd3fc';
                     return (
                       <motion.g
                         key={node.id}
@@ -224,11 +337,12 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                           strokeWidth={2}
                           filter={node.state === 'visited' || node.state === 'emphasis' ? 'url(#glow)' : undefined}
                         />
+                        <ellipse cx={node.x - 10} cy={node.y - 14} rx={14} ry={6} fill="rgba(255,255,255,0.28)" />
                         <text
                           x={node.x}
                           y={node.y + 6}
                           textAnchor="middle"
-                          fill="#0f172a"
+                          fill={bTreeFill === 'url(#nodeMetal)' ? '#0f172a' : '#ffffff'}
                           fontSize={16}
                           fontWeight={700}
                         >
@@ -250,11 +364,12 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                         cx={node.x}
                         cy={node.y}
                         r={26}
-                        fill={node.state === 'found' ? nodeFill.found : node.state === 'visited' ? nodeFill.visited : node.state === 'emphasis' ? nodeFill.emphasis : node.color === 'red' ? '#ef4444' : node.color === 'black' ? '#111827' : nodeFill.default}
-                        stroke={node.state === 'found' ? '#86efac' : 'rgba(255,255,255,0.28)'}
+                        fill={fillFor(node)}
+                        stroke={node.state === 'found' ? '#a7f3d0' : node.state === 'visited' ? '#fde68a' : 'rgba(255,255,255,0.35)'}
                         strokeWidth={2}
                         filter={node.state === 'visited' || node.state === 'emphasis' ? 'url(#glow)' : undefined}
                       />
+                      <ellipse cx={node.x - 7} cy={node.y - 11} rx={10} ry={5} fill="rgba(255,255,255,0.45)" />
                       <text
                         x={node.x}
                         y={node.y + 5}
@@ -274,23 +389,10 @@ export default function VisualizerCanvas({ structure, frame, speed }) {
                   );
                 })}
               </AnimatePresence>
-
-              {!frame ? (
-                <g>
-                  <text x="50%" y="45%" textAnchor="middle" fill="rgba(226,232,240,0.72)" fontSize={18}>
-                    Run an operation to animate the structure.
-                  </text>
-                  <text x="50%" y="50%" textAnchor="middle" fill="rgba(148,163,184,0.72)" fontSize={13}>
-                    BST, AVL, Red-Black Tree, B-Tree, and 2-3 Tree are supported.
-                  </text>
-                </g>
-              ) : null}
             </g>
-          </g>
+          )}
         </svg>
       </div>
     </div>
   );
 }
-
-// component already exported above

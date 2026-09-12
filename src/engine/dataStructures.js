@@ -164,74 +164,138 @@ const buildAVLFromValues = (values) => {
   return root;
 };
 
-const rotateRBLeft = (node) => {
-  const pivot = node.right;
-  node.right = pivot.left;
-  pivot.left = node;
-  return pivot;
+// ---------------------------------------------------------------------------
+// Classic Red-Black insertion (CLRS chapter 13). Null children are black.
+// A new node is inserted red, then the ancestry is repaired on the way up with
+// the textbook fix-up cases:
+//   * CASE 1 – red uncle: recolor (parent + uncle → black, grandparent → red).
+//   * CASE 2 – black uncle, zig-zag red child: one rotation at the parent to
+//              align the inner grandchild (misaligned child is impossible).
+//   * CASE 3 – black uncle, aligned red child: one rotation at the grandparent,
+//              then recolor the new pivot black and the old grandparent red.
+// Rotations swap positions but never change colors; all recoloring happens
+// explicitly here. Guarantees: BST order, black root, no red node with a red
+// child, and identical black-node counts on every root-to-leaf path.
+const rbRotateLeft = (x) => {
+  const y = x.right;
+  x.right = y.left;
+  if (y.left) y.left.parent = x;
+  y.parent = x.parent;
+  if (x.parent) {
+    if (x.parent.left === x) x.parent.left = y;
+    else x.parent.right = y;
+  }
+  y.left = x;
+  x.parent = y;
+  return y;
 };
 
-const rotateRBRight = (node) => {
-  const pivot = node.left;
-  node.left = pivot.right;
-  pivot.right = node;
-  return pivot;
+const rbRotateRight = (x) => {
+  const y = x.left;
+  x.left = y.right;
+  if (y.right) y.right.parent = x;
+  y.parent = x.parent;
+  if (x.parent) {
+    if (x.parent.left === x) x.parent.left = y;
+    else x.parent.right = y;
+  }
+  y.right = x;
+  x.parent = y;
+  return y;
 };
 
-const insertRBNode = (node, value) => {
-  if (!node) {
-    return { value, color: 'red', left: null, right: null };
+const stripParentLinks = (node) => {
+  if (!node) return;
+  delete node.parent;
+  stripParentLinks(node.left);
+  stripParentLinks(node.right);
+};
+
+const insertRBNode = (root, value) => {
+  if (!root) {
+    return { value, color: 'black', left: null, right: null };
   }
 
-  if (value < node.value) {
-    node.left = insertRBNode(node.left, value);
-  } else if (value > node.value) {
-    node.right = insertRBNode(node.right, value);
-  } else {
-    return node;
+  // --- BST insert while recording the ancestor path for the fix-up ---
+  let z = { value, color: 'red', left: null, right: null, parent: null };
+  const path = [];
+  let x = root;
+  while (x) {
+    path.push(x);
+    if (value < x.value) {
+      x = x.left;
+    } else if (value > x.value) {
+      x = x.right;
+    } else {
+      return root;
+    }
+  }
+  for (let i = 0; i < path.length - 1; i += 1) {
+    path[i + 1].parent = path[i];
+  }
+  const parent = path[path.length - 1];
+  if (value < parent.value) parent.left = z;
+  else parent.right = z;
+  z.parent = parent;
+
+  // --- RB-INSERT-FIXUP: recoloring (case 1) and rotations (cases 2/3) ---
+  while (z.parent && z.parent.color === 'red') {
+    const p = z.parent;
+    const g = p.parent;
+
+    if (g.left === p) {
+      const u = g.right;
+      if (u && u.color === 'red') {
+        p.color = 'black';
+        u.color = 'black';
+        g.color = 'red';
+        z = g;
+      } else if (z === p.right) {
+        z = p;
+        rbRotateLeft(z);
+        z.parent.color = 'black';
+        g.color = 'red';
+        rbRotateRight(g);
+      } else {
+        p.color = 'black';
+        g.color = 'red';
+        rbRotateRight(g);
+      }
+    } else {
+      const u = g.left;
+      if (u && u.color === 'red') {
+        p.color = 'black';
+        u.color = 'black';
+        g.color = 'red';
+        z = g;
+      } else if (z === p.left) {
+        z = p;
+        rbRotateRight(z);
+        z.parent.color = 'black';
+        g.color = 'red';
+        rbRotateLeft(g);
+      } else {
+        p.color = 'black';
+        g.color = 'red';
+        rbRotateLeft(g);
+      }
+    }
   }
 
-  if (node.left && node.left.color === 'red' && node.right && node.right.color === 'red') {
-    node.color = 'red';
-    node.left.color = 'black';
-    node.right.color = 'black';
-  }
-
-  if (node.left && node.left.color === 'red' && node.left.left && node.left.left.color === 'red') {
-    node = rotateRBRight(node);
-    node.color = 'black';
-    node.right.color = 'red';
-  }
-
-  if (node.left && node.left.color === 'red' && node.left.right && node.left.right.color === 'red') {
-    node.left = rotateRBLeft(node.left);
-    node = rotateRBRight(node);
-    node.color = 'black';
-    node.right.color = 'red';
-  }
-
-  if (node.right && node.right.color === 'red' && node.right.right && node.right.right.color === 'red') {
-    node = rotateRBLeft(node);
-    node.color = 'black';
-    node.left.color = 'red';
-  }
-
-  if (node.right && node.right.color === 'red' && node.right.left && node.right.left.color === 'red') {
-    node.right = rotateRBRight(node.right);
-    node = rotateRBLeft(node);
-    node.color = 'black';
-    node.left.color = 'red';
-  }
-
-  return node;
+  let r = z;
+  while (r.parent) r = r.parent;
+  r.color = 'black';
+  stripParentLinks(r);
+  return r;
 };
 
 const buildRedBlackTreeFromValues = (values) => {
   let root = null;
 
-  values.forEach((value) => {
+  for (const value of values) {
     root = insertRBNode(root, value);
-  });
+    if (root) root.color = 'black';
+  }
 
   if (root) {
     root.color = 'black';
@@ -240,6 +304,104 @@ const buildRedBlackTreeFromValues = (values) => {
   return root;
 };
 
+// ---------------------------------------------------------------------------
+// Topology-preserving Red-Black recolor enforcement.
+//
+// Recomputes a valid red/black assignment for the EXISTING tree shape only —
+// values, links and positions are never touched. Guarantees: root black, no
+// red parent with a red child, and identical black-node counts on every
+// root-to-null path (null links count as black leaves).
+//
+// Method: bottom-up dynamic program. For each node, compute the set of
+// achievable subtree black-heights for both parent contexts (a red parent
+// forces this node black; a black parent allows either color). A color choice
+// is feasible only when both children's achievable sets share that height.
+// Top-down reconstruction then paints each node, preferring red where feasible
+// so rebalancing stays visible in the metallic red/black styling.
+//
+// Returns true when the shape admits a valid coloring (applied in place).
+// Some shapes (e.g. a bare 3-node chain) admit no valid coloring at all —
+// then it returns false and the caller falls back to a full LLRB rebuild.
+// ---------------------------------------------------------------------------
+const intersectSets = (a, b) => {
+  const out = new Set();
+  for (const v of a) {
+    if (b.has(v)) out.add(v);
+  }
+  return out;
+};
+
+const recolorForUniformBlackHeight = (root) => {
+  if (!root) return true;
+
+  const NULL_BH = new Set([1]);
+  const sets = new Map();
+
+  const compute = (node) => {
+    if (!node) return { red: NULL_BH, black: NULL_BH };
+    const left = compute(node.left);
+    const right = compute(node.right);
+    const blackSet = new Set();
+    for (const h of intersectSets(left.black, right.black)) blackSet.add(h + 1);
+    const redSet = new Set();
+    for (const h of intersectSets(left.red, right.red)) redSet.add(h);
+    const entry = { red: redSet, black: blackSet };
+    sets.set(node, entry);
+    return entry;
+  };
+
+  const rootEntry = compute(root);
+  const options = [...rootEntry.black].sort((a, b) => a - b);
+  if (!options.length) return false;
+  const target = options[0];
+
+  const paint = (node, parentIsRed, bh) => {
+    if (!node) return true;
+    const entry = sets.get(node);
+    let color = 'black';
+    if (!parentIsRed && entry.red.has(bh)) color = 'red';
+    if (color === 'black' && !entry.black.has(bh)) {
+      if (parentIsRed || !entry.red.has(bh)) return false;
+      color = 'red';
+    }
+    node.color = color;
+    const childBH = bh - (color === 'black' ? 1 : 0);
+    const childIsRedParent = color === 'red';
+    return paint(node.left, childIsRedParent, childBH)
+      && paint(node.right, childIsRedParent, childBH);
+  };
+
+  return paint(root, false, target);
+};
+
+// Recolor the live tree in place when its shape allows it; otherwise rebuild
+// a canonically valid tree from values. The input is cloned first so stored
+// snapshots sharing the object are never mutated.
+const ensureValidRBTColors = (root, values) => {
+  if (!root) return root;
+  const clone = JSON.parse(JSON.stringify(root));
+  if (recolorForUniformBlackHeight(clone)) return clone;
+  return buildRedBlackTreeFromValues(Array.isArray(values) ? values : []);
+};
+
+// ---------------------------------------------------------------------------
+// Standard hierarchical tree layout.
+//
+// Phase 1 (bottom–up): count the leaves under every subtree. This gives each
+// subtree a width budget, expressed in "leaf slots".
+//
+// Phase 2 (top–down): place the root at the horizontal centre of the tree and
+// recursively resolve child positions from the parent:
+//   * A node with two children splits its width budget proportionally – the
+//     left child is offset left by half of the RIGHT subtree's span and the
+//     right child offset right by half of the LEFT subtree's span. Every
+//     adjacent node at the same level is therefore at least `spacing` apart,
+//     so no two nodes can ever overlap.
+//   * A node with a single child is offset by a fixed half-slot so the edge
+//     always branches diagonally outward – horizontal stacking is impossible.
+//   * Left children always land to the left, right children to the right, and
+//     every level shares the same y baseline (clean level alignment).
+// ---------------------------------------------------------------------------
 const binaryLayout = (root) => {
   if (!root) {
     return { nodes: [], links: [] };
@@ -247,12 +409,29 @@ const binaryLayout = (root) => {
 
   const nodes = [];
   const links = [];
-  let index = 0;
 
-  const walk = (node, depth, path) => {
+  const spacing = 132;
+  const halfSpacing = spacing / 2;
+  const verticalSpacing = 110;
+
+  const leafCount = new Map();
+  const countLeaves = (node) => {
+    if (!node.left && !node.right) {
+      leafCount.set(node, 1);
+      return 1;
+    }
+    const left = node.left ? countLeaves(node.left) : 0;
+    const right = node.right ? countLeaves(node.right) : 0;
+    leafCount.set(node, left + right);
+    return left + right;
+  };
+
+  countLeaves(root);
+
+  const walk = (node, depth, x, path) => {
     const id = path;
-    const x = 120 + index * 132;
-    const y = depth * 110 + 90;
+    const y = depth * verticalSpacing + 90;
+
     nodes.push({
       id,
       value: String(node.value),
@@ -261,22 +440,41 @@ const binaryLayout = (root) => {
       state: 'default',
       color: node.color,
     });
-    index += 1;
 
-    if (node.left) {
-      links.push({ from: id, to: `${path}L`, color: 'rgba(99,102,241,0.8)' });
-      walk(node.left, depth + 1, `${path}L`);
-    }
+    const lc = node.left ? leafCount.get(node.left) : 0;
+    const rc = node.right ? leafCount.get(node.right) : 0;
 
-    if (node.right) {
-      links.push({ from: id, to: `${path}R`, color: 'rgba(34,197,94,0.7)' });
-      walk(node.right, depth + 1, `${path}R`);
+    if (node.left && node.right) {
+      const leftX = x - (rc * spacing) / 2;
+      const rightX = x + (lc * spacing) / 2;
+
+      links.push({ from: id, to: `${path}L`, color: 'rgba(99,102,241,0.85)' });
+      walk(node.left, depth + 1, leftX, `${path}L`);
+
+      links.push({ from: id, to: `${path}R`, color: 'rgba(34,197,94,0.75)' });
+      walk(node.right, depth + 1, rightX, `${path}R`);
+    } else if (node.left) {
+      links.push({ from: id, to: `${path}L`, color: 'rgba(99,102,241,0.85)' });
+      walk(node.left, depth + 1, x - halfSpacing, `${path}L`);
+    } else if (node.right) {
+      links.push({ from: id, to: `${path}R`, color: 'rgba(34,197,94,0.75)' });
+      walk(node.right, depth + 1, x + halfSpacing, `${path}R`);
     }
   };
 
-  walk(root, 0, 'root');
+  const totalLeaves = leafCount.get(root) || 1;
+  const startX = ((totalLeaves - 1) * spacing) / 2 + 80;
+  walk(root, 0, startX, 'root');
+
   return { nodes, links };
 };
+
+const multiwayLinkPalette = [
+  'rgba(251,191,36,0.85)',
+  'rgba(96,165,250,0.85)',
+  'rgba(167,139,250,0.85)',
+  'rgba(52,211,153,0.85)',
+];
 
 const layoutMultiway = (root, kind = 'BTREE') => {
   if (!root) {
@@ -296,7 +494,8 @@ const layoutMultiway = (root, kind = 'BTREE') => {
     return node.children.reduce((acc, child) => acc + getSubtreeWidth(child), 0);
   };
 
-  const nodeSpacing = 160;
+  const nodeSpacing = 240;
+  const minBranchOffset = nodeSpacing * 0.35;
 
   const walk = (node, depth, x, path) => {
     const id = path;
@@ -309,25 +508,42 @@ const layoutMultiway = (root, kind = 'BTREE') => {
       x,
       y: depth * 120 + 90,
       keys: node.keys.map(String),
-      state: depth === 0 ? 'emphasis' : 'default',
+      state: 'default',
       isT23,
       isBTree,
       width: contentWidth,
     });
 
-    if (node.children && node.children.length > 0) {
+    if (node.children && node.children.length === 1) {
+      // A single child is offset horizontally so the connector stays diagonal.
+      const childPath = `${path}.0`;
+      links.push({
+        from: id,
+        to: childPath,
+        color: multiwayLinkPalette[0],
+      });
+      walk(node.children[0], depth + 1, x + nodeSpacing * 0.4, childPath);
+    } else if (node.children && node.children.length > 1) {
       const totalWidth = getSubtreeWidth(node);
       let currentX = x - (totalWidth * nodeSpacing) / 2;
 
       node.children.forEach((child, index) => {
-        const childWidth = getSubtreeWidth(child);
-        const childX = currentX + (childWidth * nodeSpacing) / 2;
+        let childWidth = getSubtreeWidth(child);
+        let childX = currentX + (childWidth * nodeSpacing) / 2;
+
+        // Overall children of an odd-sized node would sit directly under the
+        // parent; push them outward so every connector stays diagonal.
+        const delta = childX - x;
+        if (Math.abs(delta) < minBranchOffset) {
+          childX = x + (index % 2 === 0 ? -1 : 1) * minBranchOffset;
+        }
+
         const childPath = `${path}.${index}`;
 
         links.push({
           from: id,
           to: childPath,
-          color: isT23 ? 'rgba(248,113,113,0.8)' : 'rgba(255,183,77,0.7)',
+          color: multiwayLinkPalette[index % multiwayLinkPalette.length],
         });
 
         walk(child, depth + 1, childX, childPath);
@@ -760,7 +976,8 @@ class RedBlackTreeEngine extends BinarySearchTreeEngine {
 
   restore(snapshot) {
     this.values = Array.isArray(snapshot?.values) ? [...snapshot.values] : [];
-    this.root = snapshot?.payload ?? buildRedBlackTreeFromValues(this.values);
+    const base = snapshot?.payload ?? buildRedBlackTreeFromValues(this.values);
+    this.root = ensureValidRBTColors(base, this.values);
   }
 }
 
@@ -991,3 +1208,5 @@ export const createStructureEngine = (kind) => {
       return new BinarySearchTreeEngine();
   }
 };
+
+export { recolorForUniformBlackHeight };

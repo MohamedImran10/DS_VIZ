@@ -51,7 +51,3 @@ export interface OperationHistoryEntry {
   timestamp: number;
 }
 
-export interface EngineContext {
-  maxSize: number;
-}
-

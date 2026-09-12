@@ -19,13 +19,11 @@ export default function App() {
   const engineMap = useRef(new Map());
   const [selectedKind, setSelectedKind] = useState('BST');
   const [value, setValue] = useState('');
-  const [maxSize, setMaxSize] = useState('');
   const [history, setHistory] = useState([]);
   const [activeEntryId, setActiveEntryId] = useState(null);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
   const [timeline, setTimeline] = useState([]);
   const [engineVersion, setEngineVersion] = useState(0);
-  const [limitAlert, setLimitAlert] = useState({ open: false, message: '', suggestion: '' });
   const [statusAlert, setStatusAlert] = useState({ open: false, message: '' });
 
   const engine = useMemo(() => {
@@ -37,7 +35,6 @@ export default function App() {
   }, [selectedKind, engineVersion]);
 
   const clearAlerts = () => {
-    setLimitAlert({ open: false, message: '', suggestion: '' });
     setStatusAlert({ open: false, message: '' });
   };
 
@@ -48,30 +45,12 @@ export default function App() {
     setActiveFrameIndex(0);
     setActiveEntryId(null);
     setValue('');
-    setMaxSize('');
     setHistory([]);
     clearAlerts();
   }, [selectedKind]);
 
   const currentFrame = timeline[activeFrameIndex] ?? timeline.at(-1) ?? defaultFrame;
-  // Pass `maxSize` as a number only when the user provided a value.
-  // An empty input means "no limit" (null), so engines can treat it accordingly.
-  const context = {
-    maxSize: maxSize === '' ? null : (Number.isFinite(Number(maxSize)) ? Math.max(0, Number(maxSize)) : null),
-  };
-  const handleMaxSizeChange = (nextValue) => {
-    if (nextValue === '') {
-      setMaxSize('');
-      return;
-    }
-
-    const parsed = Number(nextValue);
-    if (!Number.isFinite(parsed)) {
-      return;
-    }
-
-    setMaxSize(Math.max(0, parsed));
-  };
+  const context = {};
 
   useEffect(() => {
     if (timeline.length <= 1) {
@@ -117,7 +96,6 @@ export default function App() {
     setValue('');
 
     let isStatusOnly = !result.message
-      || result.message.startsWith('Structure limit reached at')
       || result.message === 'Enter a valid numeric value'
       || result.message.includes('already in list')
       || result.message.startsWith('Found ')
@@ -131,17 +109,7 @@ export default function App() {
     }
 
     if (isStatusOnly) {
-      if (result.message?.startsWith('Structure limit reached at')) {
-        setLimitAlert({
-          open: true,
-          message: result.message,
-          suggestion: 'Recommended: increase the structure size to continue adding more values.',
-        });
-        setStatusAlert({ open: false, message: '' });
-      } else {
-        setStatusAlert({ open: true, message: result.message || 'Operation unavailable' });
-        setLimitAlert({ open: false, message: '', suggestion: '' });
-      }
+      setStatusAlert({ open: true, message: result.message || 'Operation unavailable' });
 
       setTimeline(result.frames.length ? result.frames : [defaultFrame]);
       setActiveFrameIndex(0);
@@ -226,36 +194,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-mesh-gradient">
-      {limitAlert.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 backdrop-blur-sm sm:px-4">
-          <div className="w-full max-w-md rounded-2xl border border-amber-400/40 bg-slate-900/95 p-4 shadow-[0_0_30px_rgba(251,191,36,0.18)] sm:rounded-3xl sm:p-6">
-            <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-lg text-amber-200 sm:h-11 sm:w-11 sm:rounded-2xl sm:text-2xl">⚠</div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-amber-100/90 sm:text-xs sm:tracking-[0.22em]">Limit reached</p>
-                  <h3 className="mt-0.5 text-base font-semibold text-white sm:mt-1 sm:text-xl">Structure full</h3>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-sm leading-6 text-white sm:text-base sm:leading-7">{limitAlert.message}</p>
-            {limitAlert.suggestion && <p className="mt-2 text-xs leading-5 text-amber-100 sm:mt-3 sm:text-sm sm:leading-6">{limitAlert.suggestion}</p>}
-
-            <div className="mt-4 flex justify-end sm:mt-6">
-              <button
-                type="button"
-                onClick={() => setLimitAlert({ open: false, message: '', suggestion: '' })}
-                className="rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2 text-sm font-medium text-slate-950 shadow-lg shadow-amber-500/20 transition hover:brightness-110 sm:rounded-2xl sm:px-5 sm:py-2.5 sm:text-base"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {statusAlert.open && !limitAlert.open && (
+      {statusAlert.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 px-3 backdrop-blur-sm sm:px-4">
           <div className="w-full max-w-md rounded-2xl border border-sky-400/40 bg-slate-900/95 p-4 shadow-[0_0_30px_rgba(56,189,248,0.16)] sm:rounded-3xl sm:p-6">
             <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
@@ -299,10 +238,8 @@ export default function App() {
 
           <ControlPanel
             value={value}
-            maxSize={maxSize}
             selectedKind={selectedKind}
             onValueChange={setValue}
-            onMaxSizeChange={handleMaxSizeChange}
             onInsert={() => runOperation('insert')}
             onDelete={() => runOperation('delete')}
             onSearch={() => runOperation('search')}
