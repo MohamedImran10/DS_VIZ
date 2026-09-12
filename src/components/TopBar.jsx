@@ -1,5 +1,7 @@
 import { Binary, Layers3, RotateCcw, ShieldCheck, Sigma, TreePine, Menu, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import ModeToggle from './ModeToggle.jsx';
+import ThemeToggle from './ThemeToggle.jsx';
 
 const options = [
   { kind: 'BST', label: 'BST', icon: <TreePine size={16} /> },
@@ -9,7 +11,7 @@ const options = [
   { kind: 'T23', label: '2-3 Tree', icon: <Sigma size={16} /> },
 ];
 
-export default function TopBar({ active, onChange, onReset }) {
+export default function TopBar({ active, onChange, onReset, theme, setTheme, mode, setMode }) {
   const optionsRef = useRef(null);
   const containerRef = useRef(null);
   const menuRef = useRef(null);
@@ -71,25 +73,25 @@ export default function TopBar({ active, onChange, onReset }) {
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--surface-header)] backdrop-blur-xl">
       <div ref={containerRef} className="mx-auto flex max-w-[1600px] flex-col md:flex-row items-start md:items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-4 sm:py-3 lg:px-8">
         <div className="w-full md:w-auto">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-amber-200/70 sm:text-xs sm:tracking-[0.35em]">Advanced Data Structures</p>
-          <h1 className="mt-1 text-lg font-semibold text-white sm:mt-2 sm:text-2xl md:text-3xl">Interactive Visualizer</h1>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--accent-fg)] sm:text-xs sm:tracking-[0.35em]">Advanced Data Structures</p>
+          <h1 className="mt-1 text-lg font-semibold text-[var(--text-strong)] sm:mt-2 sm:text-2xl md:text-3xl">Interactive Visualizer</h1>
         </div>
 
         <div className="w-full md:w-auto flex items-center justify-end gap-2 sm:gap-3">
           <div className="flex-1 md:flex-none md:mr-2">
             {!isOverflowing ? (
-              <div ref={optionsRef} className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-0.5 shadow-glow overflow-x-auto max-w-full sm:gap-2 sm:p-1">
+              <div ref={optionsRef} className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5 shadow-glow overflow-x-auto max-w-full sm:gap-2 sm:p-1">
                 {options.map((option) => (
                   <button
                     key={option.kind}
                     type="button"
                     onClick={() => onChange(option.kind)}
                     className={`flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium transition-all whitespace-nowrap sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm ${active === option.kind
-                        ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/30'
-                        : 'text-slate-200 hover:bg-white/10'
+                        ? 'btn-accent text-slate-950 shadow-lg shadow-[var(--accent-glow)]'
+                        : 'text-[var(--text-soft)] hover:bg-[var(--hover)]'
                       }`}
                   >
                     {option.icon}
@@ -106,7 +108,7 @@ export default function TopBar({ active, onChange, onReset }) {
                   aria-expanded={menuOpen}
                   aria-controls="topbar-options-menu"
                   onClick={() => setMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 text-sm font-medium text-white transition hover:bg-white/10 sm:p-2"
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1.5 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[var(--hover)] sm:p-2"
                 >
                   {menuOpen ? <X size={18} /> : <Menu size={18} />}
                 </button>
@@ -115,7 +117,7 @@ export default function TopBar({ active, onChange, onReset }) {
                   <div
                     ref={menuRef}
                     id="topbar-options-menu"
-                    className="absolute left-0 right-0 z-50 mt-2 rounded-2xl border border-white/10 bg-slate-950/95 p-2 shadow-lg backdrop-blur-xl sm:left-auto sm:right-0 sm:w-56 sm:p-3"
+                    className="absolute left-0 right-0 z-50 mt-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-solid)] p-2 shadow-lg backdrop-blur-xl sm:left-auto sm:right-0 sm:w-56 sm:p-3"
                   >
                     {options.map((option) => (
                       <button
@@ -125,7 +127,7 @@ export default function TopBar({ active, onChange, onReset }) {
                           onChange(option.kind);
                           setMenuOpen(false);
                         }}
-                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition sm:rounded-lg sm:py-2 ${active === option.kind ? 'bg-amber-400/10 text-amber-200' : 'text-slate-200 hover:bg-white/5'
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition sm:rounded-lg sm:py-2 ${active === option.kind ? 'bg-[var(--accent-soft)] text-[var(--accent-fg)]' : 'text-[var(--text-soft)] hover:bg-[var(--hover-subtle)]'
                           }`}
                       >
                         <span className="flex-shrink-0">{option.icon}</span>
@@ -137,6 +139,9 @@ export default function TopBar({ active, onChange, onReset }) {
               </div>
             )}
           </div>
+
+          <ModeToggle mode={mode} setMode={setMode} />
+          <ThemeToggle theme={theme} setTheme={setTheme} />
         </div>
       </div>
     </header>

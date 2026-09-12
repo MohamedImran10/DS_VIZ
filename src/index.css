@@ -2,10 +2,159 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   Accent palette. Every color theme defines the same CSS custom properties;
+   selected by the `data-theme` attribute on <html>. Sunset is the default.
+--------------------------------------------------------------------------- */
+:root,
+[data-theme='sunset'] {
+  --accent-from: #fbbf24;
+  --accent-to: #f97316;
+  --accent-hi: #fde68a;
+  --accent-text: #f59e0b;
+  --accent-soft: rgba(251, 191, 36, 0.1);
+  --accent-glow: rgba(251, 191, 36, 0.3);
+  --accent-border: rgba(251, 191, 36, 0.25);
+  --mesh-a: rgba(255, 183, 77, 0.25);
+  --mesh-b: rgba(99, 102, 241, 0.22);
+  --body-a: #0b1020;
+  --body-b: #060913;
+}
+
+[data-theme='ocean'] {
+  --accent-from: #22d3ee;
+  --accent-to: #0ea5e9;
+  --accent-hi: #a5f3fc;
+  --accent-text: #06b6d4;
+  --accent-soft: rgba(6, 182, 212, 0.1);
+  --accent-glow: rgba(6, 182, 212, 0.3);
+  --accent-border: rgba(6, 182, 212, 0.25);
+  --mesh-a: rgba(6, 182, 212, 0.22);
+  --mesh-b: rgba(99, 102, 241, 0.2);
+  --body-a: #0b1220;
+  --body-b: #060a14;
+}
+
+[data-theme='emerald'] {
+  --accent-from: #34d399;
+  --accent-to: #059669;
+  --accent-hi: #a7f3d0;
+  --accent-text: #10b981;
+  --accent-soft: rgba(16, 185, 129, 0.1);
+  --accent-glow: rgba(16, 185, 129, 0.3);
+  --accent-border: rgba(16, 185, 129, 0.25);
+  --mesh-a: rgba(52, 211, 153, 0.2);
+  --mesh-b: rgba(99, 102, 241, 0.18);
+  --body-a: #0b1512;
+  --body-b: #060a0a;
+}
+
+[data-theme='rose'] {
+  --accent-from: #fb7185;
+  --accent-to: #e11d48;
+  --accent-hi: #fecdd3;
+  --accent-text: #f43f5e;
+  --accent-soft: rgba(244, 63, 94, 0.1);
+  --accent-glow: rgba(244, 63, 94, 0.3);
+  --accent-border: rgba(244, 63, 94, 0.25);
+  --mesh-a: rgba(244, 63, 94, 0.2);
+  --mesh-b: rgba(99, 102, 241, 0.18);
+  --body-a: #130b10;
+  --body-b: #0a0606;
+}
+
+[data-theme='violet'] {
+  --accent-from: #a78bfa;
+  --accent-to: #7c3aed;
+  --accent-hi: #ddd6fe;
+  --accent-text: #8b5cf6;
+  --accent-soft: rgba(139, 92, 246, 0.1);
+  --accent-glow: rgba(139, 92, 246, 0.3);
+  --accent-border: rgba(139, 92, 246, 0.25);
+  --mesh-a: rgba(139, 92, 246, 0.22);
+  --mesh-b: rgba(99, 102, 241, 0.18);
+  --body-a: #0f0b18;
+  --body-b: #08060f;
+}
+
+/* ---------------------------------------------------------------------------
+   Surface / neutral palette, switched by the `data-ds-mode` attribute.
+   Dark is the default.
+--------------------------------------------------------------------------- */
 :root {
   color-scheme: dark;
+  --accent-fg: var(--accent-hi);
+
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-header: rgba(2, 6, 23, 0.7);
+  --surface-input: rgba(15, 23, 42, 0.8);
+  --surface-solid: rgba(15, 23, 42, 0.95);
+  --overlay: rgba(2, 6, 23, 0.75);
+  --side: rgba(2, 6, 23, 0.5);
+  --result: rgba(15, 23, 42, 0.7);
+  --hover: rgba(255, 255, 255, 0.1);
+  --hover-subtle: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.1);
+
+  --text-strong: #ffffff;
+  --text-100: #f1f5f9;
+  --text-soft: #e2e8f0;
+  --text-muted: #cbd5e1;
+  --text-faint: #94a3b8;
+  --ring-offset: #0f172a;
+
+  --glow-ring: rgba(255, 255, 255, 0.08);
+  --glow-shadow: rgba(0, 0, 0, 0.35);
+  --scroll-thumb: rgba(255, 255, 255, 0.14);
+  --scroll-track: rgba(255, 255, 255, 0.04);
+
+  --rose-text: #ffe4e6;
+  --cyan-text: #cffafe;
+  --violet-text: #ede9fe;
+  --emerald-text: #d1fae5;
+  --sky-text: #e0f2fe;
+
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: #090d18;
+}
+
+[data-ds-mode='light'] {
+  color-scheme: light;
+  --accent-fg: color-mix(in srgb, var(--accent-text) 72%, black);
+
+  --surface: rgba(255, 255, 255, 0.6);
+  --surface-header: rgba(255, 255, 255, 0.85);
+  --surface-input: rgba(255, 255, 255, 0.95);
+  --surface-solid: #ffffff;
+  --overlay: rgba(226, 232, 240, 0.72);
+  --side: rgba(255, 255, 255, 0.78);
+  --result: rgba(255, 255, 255, 0.85);
+  --hover: rgba(15, 23, 42, 0.1);
+  --hover-subtle: rgba(15, 23, 42, 0.06);
+  --border: rgba(15, 23, 42, 0.12);
+
+  --text-strong: #0f172a;
+  --text-100: #1e293b;
+  --text-soft: #334155;
+  --text-muted: #475569;
+  --text-faint: #64748b;
+  --ring-offset: #f8fafc;
+
+  --glow-ring: rgba(15, 23, 42, 0.1);
+  --glow-shadow: rgba(15, 23, 42, 0.16);
+  --scroll-thumb: rgba(15, 23, 42, 0.25);
+  --scroll-track: rgba(15, 23, 42, 0.06);
+
+  --rose-text: #be123c;
+  --cyan-text: #0e7490;
+  --violet-text: #6d28d9;
+  --emerald-text: #047857;
+  --sky-text: #0369a1;
+
+  --mesh-a: color-mix(in srgb, var(--accent-text) 26%, transparent);
+  --mesh-b: color-mix(in srgb, #6366f1 20%, transparent);
+  --body-a: #e9edf6;
+  --body-b: #dbe2ee;
 }
 
 html,
@@ -18,10 +167,26 @@ body,
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(255, 183, 77, 0.15), transparent 24%),
-    radial-gradient(circle at top right, rgba(99, 102, 241, 0.18), transparent 24%),
-    linear-gradient(180deg, #0b1020 0%, #060913 100%);
-  color: #e5eefc;
+    radial-gradient(circle at top left, var(--mesh-a), transparent 28%),
+    radial-gradient(circle at top right, var(--mesh-b), transparent 26%),
+    linear-gradient(180deg, var(--body-a), var(--body-b));
+  color: var(--text-soft);
+}
+
+.bg-mesh-gradient {
+  background:
+    radial-gradient(circle at top left, var(--mesh-a), transparent 28%),
+    radial-gradient(circle at top right, var(--mesh-b), transparent 26%),
+    linear-gradient(180deg, var(--body-a), var(--body-b));
+}
+
+/* Primary accent button gradient, driven by the active theme. */
+.btn-accent {
+  background-image: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+}
+
+.shadow-glow {
+  box-shadow: 0 0 0 1px var(--glow-ring), 0 16px 40px var(--glow-shadow);
 }
 
 * {
@@ -34,12 +199,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--scroll-thumb);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--scroll-track);
 }
 
 @media (max-width: 639px) {
